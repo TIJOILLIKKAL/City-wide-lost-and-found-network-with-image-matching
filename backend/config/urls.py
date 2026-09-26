@@ -3,7 +3,6 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerUIView
 
 
 def health_check(request):
@@ -21,11 +20,13 @@ urlpatterns = [
     path("api/v1/matching/", include("apps.matching.urls")),
     path("api/v1/claims/", include("apps.claims.urls")),
     path("api/v1/notifications/", include("apps.notifications.urls")),
-
-    # API docs
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerUIView.as_view(url_name="schema"), name="swagger-ui"),
 ]
 
 if settings.DEBUG:
+    from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerUIView
+
+    urlpatterns += [
+        path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+        path("api/docs/", SpectacularSwaggerUIView.as_view(url_name="schema"), name="swagger-ui"),
+    ]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
