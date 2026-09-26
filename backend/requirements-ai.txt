@@ -1,0 +1,7 @@
+# Heavy ML dependencies — install separately on the matching service / production worker
+# NOT needed for running the Django app or tests
+-r requirements.txt
+
+torch==2.4.0
+transformers==4.44.2
+open-clip-torch==2.26.1
