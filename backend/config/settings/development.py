@@ -1,23 +1,18 @@
 from .base import *
+import os
 
 DEBUG = True
-
-INSTALLED_APPS += ["debug_toolbar"]
 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {
         "console": {"class": "logging.StreamHandler"},
-        "file": {
-            "class": "logging.FileHandler",
-            "filename": BASE_DIR / "logs/debug.log",
-        },
     },
     "root": {"handlers": ["console"], "level": "DEBUG"},
     "loggers": {
-        "django": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
-        "apps": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
+        "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "apps": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
     },
 }
 
