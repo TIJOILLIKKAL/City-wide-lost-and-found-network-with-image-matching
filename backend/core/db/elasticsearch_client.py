@@ -48,5 +48,5 @@ def ensure_items_index():
             }
         }
     }
-    es.indices.create(index=ITEMS_INDEX, body=mapping)
+    es.indices.create(index=ITEMS_INDEX, mappings=mapping["mappings"])
     logger.info("Created Elasticsearch index: %s", ITEMS_INDEX)

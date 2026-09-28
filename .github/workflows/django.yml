@@ -12,6 +12,7 @@ jobs:
 
     strategy:
       max-parallel: 4
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
 
@@ -69,10 +70,14 @@ jobs:
     - name: Prepare directories
       run: mkdir -p backend/logs backend/media
 
+    - name: Django system check
+      run: |
+        cd backend && python manage.py check
+
     - name: Run Migrations
       run: |
-        cd backend && python manage.py migrate --noinput
+        cd backend && python manage.py migrate --noinput --skip-checks
 
     - name: Run Tests
       run: |
-        cd backend && python manage.py test
+        cd backend && python manage.py test --verbosity=2

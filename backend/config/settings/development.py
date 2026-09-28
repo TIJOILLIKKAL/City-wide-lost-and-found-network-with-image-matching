@@ -1,7 +1,7 @@
 from .base import *
-import os
+from decouple import config
 
-DEBUG = True
+DEBUG = config("DEBUG", default=True, cast=bool)
 
 LOGGING = {
     "version": 1,
@@ -16,5 +16,4 @@ LOGGING = {
     },
 }
 
-# Use local filesystem for media in development
 DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
