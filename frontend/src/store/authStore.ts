@@ -22,20 +22,21 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       login: async (email, password) => {
-        const { user, tokens } = await authApi.login({ email, password });
-        tokenStorage.set(tokens.access, tokens.refresh);
+        const { user, access, refresh } = await authApi.login({ email, password });
+        tokenStorage.set(access, refresh);
         set({ user, isAuthenticated: true });
       },
 
       register: async (email, password, fullName, phone, role = "owner") => {
-        const { user, tokens } = await authApi.register({
+        const { user, access, refresh } = await authApi.register({
           email,
           password,
+          password2: password,
           full_name: fullName,
           phone,
           role,
         });
-        tokenStorage.set(tokens.access, tokens.refresh);
+        tokenStorage.set(access, refresh);
         set({ user, isAuthenticated: true });
       },
 

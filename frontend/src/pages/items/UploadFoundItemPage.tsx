@@ -43,7 +43,7 @@ export function UploadFoundItemPage() {
     mutationFn: (formData: FormData) => itemsApi.createFoundItem(formData as unknown as globalThis.FormData),
     onSuccess: (item) => {
       queryClient.invalidateQueries({ queryKey: ["found-items"] });
-      navigate(`/items/found/${item._id}`);
+      navigate(`/items/found/${item.id}`);
     },
   });
 

@@ -42,7 +42,7 @@ export function ReportLostItemPage() {
     mutationFn: (formData: FormData) => itemsApi.createLostItem(formData as unknown as globalThis.FormData),
     onSuccess: (item) => {
       queryClient.invalidateQueries({ queryKey: ["lost-items"] });
-      navigate(`/items/lost/${item._id}`);
+      navigate(`/items/lost/${item.id}`);
     },
   });
 

@@ -100,7 +100,7 @@ export function FoundItemsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((item) => (
-            <FoundItemCard key={item._id} item={item} />
+            <FoundItemCard key={item.id} item={item} />
           ))}
         </div>
       )}
@@ -125,7 +125,7 @@ export function FoundItemsPage() {
 
 function FoundItemCard({ item }: { item: FoundItem }) {
   return (
-    <Link to={`/items/found/${item._id}`}>
+    <Link to={`/items/found/${item.id}`}>
       <Card className="hover:shadow-md transition-shadow overflow-hidden h-full">
         <div className="aspect-video bg-muted overflow-hidden">
           {item.image_url ? (

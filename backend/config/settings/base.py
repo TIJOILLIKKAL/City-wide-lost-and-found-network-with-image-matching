@@ -190,10 +190,17 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
 AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
 AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="lostfound-media")
-AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="ap-south-1")
-AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
-AWS_DEFAULT_ACL = "public-read"
+AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="eu-north-1")
+AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
+AWS_DEFAULT_ACL = None          # bucket has ACLs disabled (Object Ownership = BucketOwnerEnforced)
 AWS_S3_FILE_OVERWRITE = False
+AWS_QUERYSTRING_AUTH = False    # generate clean public URLs without signed query strings
+AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
+
+# Use S3 for media files when credentials are present
+if AWS_ACCESS_KEY_ID:
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
 
 # MongoDB (accessed via core.db.mongo)
 MONGO_URI = config("MONGO_URI", default="mongodb://localhost:27017/")

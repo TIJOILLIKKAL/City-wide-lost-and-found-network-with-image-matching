@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from bson import ObjectId
+from bson.errors import InvalidId
 
 from core.db.mongo import found_items_collection, lost_items_collection
 
@@ -81,17 +82,54 @@ def create_lost_item(data: dict, image_file, reported_by: int) -> dict:
 
 
 def get_found_item(item_id: str) -> dict | None:
-    doc = found_items_collection().find_one({"_id": ObjectId(item_id)})
+    try:
+        doc = found_items_collection().find_one({"_id": ObjectId(item_id)})
+    except (InvalidId, TypeError):
+        return None
     if doc:
         doc["_id"] = str(doc["_id"])
     return doc
 
 
 def get_lost_item(item_id: str) -> dict | None:
-    doc = lost_items_collection().find_one({"_id": ObjectId(item_id)})
+    try:
+        doc = lost_items_collection().find_one({"_id": ObjectId(item_id)})
+    except (InvalidId, TypeError):
+        return None
     if doc:
         doc["_id"] = str(doc["_id"])
     return doc
+
+
+def update_lost_item(item_id: str, data: dict, image_file=None) -> dict | None:
+    try:
+        oid = ObjectId(item_id)
+    except (InvalidId, TypeError):
+        return None
+
+    updates = {k: v for k, v in data.items() if v is not None}
+    if image_file:
+        image_url, image_key = upload_item_image(image_file, "lost")
+        updates["image_url"] = image_url
+        updates["image_key"] = image_key
+        updates["embedding_status"] = "pending"
+    updates["updated_at"] = datetime.now(timezone.utc)
+
+    lost_items_collection().update_one({"_id": oid}, {"$set": updates})
+    return get_lost_item(item_id)
+
+
+def delete_lost_item(item_id: str) -> bool:
+    """Soft-delete by setting status=closed."""
+    try:
+        oid = ObjectId(item_id)
+    except (InvalidId, TypeError):
+        return False
+    result = lost_items_collection().update_one(
+        {"_id": oid},
+        {"$set": {"status": "closed", "updated_at": datetime.now(timezone.utc)}},
+    )
+    return result.modified_count > 0
 
 
 def list_found_items(venue_id: int = None, category: str = None, status: str = None, limit: int = 20, skip: int = 0) -> list:

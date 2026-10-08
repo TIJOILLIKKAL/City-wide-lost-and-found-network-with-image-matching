@@ -23,4 +23,12 @@ export const itemsApi = {
     apiClient.post<LostItem>("/items/lost/", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }).then((r) => r.data),
+
+  updateLostItem: (id: string, formData: FormData) =>
+    apiClient.patch<LostItem>(`/items/lost/${id}/`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((r) => r.data),
+
+  deleteLostItem: (id: string) =>
+    apiClient.delete(`/items/lost/${id}/`),
 };

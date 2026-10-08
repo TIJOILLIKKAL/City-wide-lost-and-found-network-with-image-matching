@@ -26,6 +26,7 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string;
   password: string;
+  password2: string;
   full_name: string;
   phone?: string;
   role?: UserRole;
@@ -33,7 +34,8 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
   user: User;
-  tokens: AuthTokens;
+  access: string;
+  refresh: string;
 }
 
 // ─── Venues ───────────────────────────────────────────────────────────────────
@@ -85,7 +87,7 @@ export type FoundItemStatus = "available" | "claimed" | "returned";
 export type LostItemStatus = "searching" | "found" | "closed";
 
 export interface FoundItem {
-  _id: string;
+  id: string;
   item_type: "found";
   venue_id: number;
   reported_by: number;
@@ -103,7 +105,7 @@ export interface FoundItem {
 }
 
 export interface LostItem {
-  _id: string;
+  id: string;
   item_type: "lost";
   reported_by: number;
   title: string;

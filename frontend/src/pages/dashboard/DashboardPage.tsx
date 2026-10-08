@@ -82,7 +82,7 @@ function StaffDashboard() {
           )}
           <div className="space-y-3">
             {foundItems?.results.map((item) => (
-              <div key={item._id} className="flex items-center justify-between py-2 border-b last:border-0">
+              <div key={item.id} className="flex items-center justify-between py-2 border-b last:border-0">
                 <div className="flex items-center gap-3">
                   {item.image_url && (
                     <img
@@ -171,7 +171,7 @@ function OwnerDashboard() {
           )}
           <div className="space-y-3">
             {lostItems?.results.map((item) => (
-              <div key={item._id} className="flex items-center justify-between py-2 border-b last:border-0">
+              <div key={item.id} className="flex items-center justify-between py-2 border-b last:border-0">
                 <div>
                   <p className="text-sm font-medium">{item.title}</p>
                   <p className="text-xs text-muted-foreground">{item.category} · Lost {new Date(item.lost_at).toLocaleDateString()}</p>

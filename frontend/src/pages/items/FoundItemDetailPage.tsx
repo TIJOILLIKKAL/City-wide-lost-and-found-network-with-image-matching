@@ -83,7 +83,7 @@ export function FoundItemDetailPage() {
 
           {item.status === "available" && (
             <Button className="w-full" asChild>
-              <Link to={`/claims/new?found_item_id=${item._id}`}>
+              <Link to={`/claims/new?found_item_id=${item.id}`}>
                 Claim This Item
               </Link>
             </Button>

@@ -11,39 +11,52 @@ import { itemsApi } from "@/api/items";
 import { CATEGORIES } from "@/lib/constants";
 import type { LostItem } from "@/types";
 
+type Tab = "searching" | "found" | "closed";
+
+const TABS: { value: Tab; label: string }[] = [
+  { value: "searching", label: "Searching" },
+  { value: "found",     label: "Found" },
+  { value: "closed",    label: "Closed" },
+];
+
 export function LostItemsPage() {
+  const [tab, setTab] = useState<Tab>("searching");
   const [category, setCategory] = useState("");
-  const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 12;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["lost-items", category, status, page],
+    queryKey: ["lost-items", tab, category, page],
     queryFn: () =>
       itemsApi.listLostItems({
+        status: tab,
         ...(category && { category }),
-        ...(status && { status }),
         limit: PAGE_SIZE,
-        skip: (page - 1) * PAGE_SIZE,
+        page,
       }),
   });
 
-  const filtered = data?.results.filter((item) =>
+  const filtered = (data?.results ?? []).filter((item) =>
     search
       ? item.title.toLowerCase().includes(search.toLowerCase()) ||
         item.description.toLowerCase().includes(search.toLowerCase())
       : true
-  ) ?? [];
+  );
 
-  const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 1;
+  const totalPages = data ? Math.ceil((data.count ?? filtered.length) / PAGE_SIZE) : 1;
+
+  const handleTabChange = (t: Tab) => {
+    setTab(t);
+    setPage(1);
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">My Lost Items</h1>
-          <p className="text-muted-foreground mt-1">{data?.count ?? 0} items reported</p>
+          <p className="text-muted-foreground mt-1">{data?.count ?? filtered.length} items</p>
         </div>
         <Button asChild>
           <Link to="/items/lost/new">
@@ -51,6 +64,24 @@ export function LostItemsPage() {
             Report Lost Item
           </Link>
         </Button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b">
+        {TABS.map((t) => (
+          <button
+            key={t.value}
+            onClick={() => handleTabChange(t.value)}
+            className={[
+              "px-4 py-2 text-sm font-medium border-b-2 transition-colors",
+              tab === t.value
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            ].join(" ")}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {/* Filters */}
@@ -64,17 +95,15 @@ export function LostItemsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select className="w-40" value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }}>
+        <Select
+          className="w-40"
+          value={category}
+          onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+        >
           <option value="">All categories</option>
           {CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>{c.label}</option>
           ))}
-        </Select>
-        <Select className="w-36" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
-          <option value="">All statuses</option>
-          <option value="searching">Searching</option>
-          <option value="found">Found</option>
-          <option value="closed">Closed</option>
         </Select>
       </div>
 
@@ -85,20 +114,24 @@ export function LostItemsPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState />
+        <EmptyState tab={tab} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((item) => (
-            <LostItemCard key={item._id} item={item} />
+            <LostItemCard key={item.id} item={item} />
           ))}
         </div>
       )}
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-4">
-          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+            Previous
+          </Button>
           <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+          <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+            Next
+          </Button>
         </div>
       )}
     </div>
@@ -107,7 +140,7 @@ export function LostItemsPage() {
 
 function LostItemCard({ item }: { item: LostItem }) {
   return (
-    <Link to={`/items/lost/${item._id}`}>
+    <Link to={`/items/lost/${item.id}`}>
       <Card className="hover:shadow-md transition-shadow overflow-hidden h-full">
         <div className="aspect-video bg-muted overflow-hidden">
           {item.image_url ? (
@@ -135,9 +168,9 @@ function LostItemCard({ item }: { item: LostItem }) {
           </div>
           {item.status === "searching" && (
             <Button size="sm" variant="outline" className="w-full mt-1 text-xs" asChild>
-              <Link to={`/items/lost/${item._id}`} onClick={(e) => e.stopPropagation()}>
+              <span>
                 <Search className="h-3 w-3 mr-1" /> View Matches
-              </Link>
+              </span>
             </Button>
           )}
         </CardContent>
@@ -146,20 +179,25 @@ function LostItemCard({ item }: { item: LostItem }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ tab }: { tab: Tab }) {
+  const messages: Record<Tab, string> = {
+    searching: "No items currently being searched.",
+    found:     "None of your lost items have been marked as found yet.",
+    closed:    "No closed or deleted items.",
+  };
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <MapPin className="h-12 w-12 text-muted-foreground/40 mb-4" />
-      <h3 className="font-semibold text-lg mb-1">Nothing reported yet</h3>
-      <p className="text-muted-foreground text-sm mb-4">
-        Report a lost item and our AI will search for matches.
-      </p>
-      <Button asChild>
-        <Link to="/items/lost/new">
-          <Plus className="h-4 w-4 mr-2" />
-          Report Lost Item
-        </Link>
-      </Button>
+      <h3 className="font-semibold text-lg mb-1">Nothing here</h3>
+      <p className="text-muted-foreground text-sm mb-4">{messages[tab]}</p>
+      {tab === "searching" && (
+        <Button asChild>
+          <Link to="/items/lost/new">
+            <Plus className="h-4 w-4 mr-2" />
+            Report Lost Item
+          </Link>
+        </Button>
+      )}
     </div>
   );
 }

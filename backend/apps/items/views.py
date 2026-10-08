@@ -13,6 +13,7 @@ from .services import (
     create_found_item, create_lost_item,
     get_found_item, get_lost_item,
     list_found_items, list_lost_items,
+    update_lost_item, delete_lost_item,
 )
 from .tasks import generate_embedding
 
@@ -173,6 +174,7 @@ class LostItemListCreateView(APIView):
 
 
 class LostItemDetailView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -181,11 +183,47 @@ class LostItemDetailView(APIView):
         description="Retrieve a single lost item. Owners can only view their own; admins can view all.",
         responses={200: ItemResponseSerializer, 404: None},
     )
-    def get(self, request, item_id):
+    def _get_owned(self, request, item_id):
+        """Return item if it exists and belongs to this user (or user is admin)."""
         item = get_lost_item(item_id)
         if not item:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        # Owners can only view their own
+            return None, Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         if not request.user.is_admin and item.get("reported_by") != request.user.id:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+            return None, Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return item, None
+
+    def get(self, request, item_id):
+        item, err = self._get_owned(request, item_id)
+        if err:
+            return err
         return Response(_format_item(item))
+
+    def patch(self, request, item_id):
+        item, err = self._get_owned(request, item_id)
+        if err:
+            return err
+
+        allowed = {"title", "description", "category", "color", "brand", "lost_at", "lost_location", "status"}
+        data = {k: v for k, v in request.data.items() if k in allowed}
+        # Only allow valid status transitions
+        new_status = data.get("status")
+        if new_status and new_status not in ("searching", "found", "closed"):
+            return Response({"detail": "Invalid status."}, status=status.HTTP_400_BAD_REQUEST)
+
+        image_file = request.FILES.get("image")
+        updated = update_lost_item(item_id, data, image_file=image_file)
+        if not updated:
+            return Response({"detail": "Update failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        if image_file:
+            from .tasks import generate_embedding
+            generate_embedding.delay(item_id, "lost")
+
+        return Response(_format_item(updated))
+
+    def delete(self, request, item_id):
+        item, err = self._get_owned(request, item_id)
+        if err:
+            return err
+        delete_lost_item(item_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
