@@ -19,7 +19,6 @@ const statusBadge: Record<string, "default" | "success" | "warning" | "danger" |
 const CATEGORIES = ["bag", "phone", "wallet", "keys", "clothing", "document", "electronics", "jewelry", "other"];
 
 export function FoundItemsPage() {
-  const [search] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [venueFilter, setVenueFilter] = useState("");

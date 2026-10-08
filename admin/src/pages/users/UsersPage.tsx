@@ -9,13 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { capitalize, fmtDate } from "@/lib/utils";
-
-const roleBadge: Record<string, "default" | "success" | "warning" | "danger" | "info" | "neutral"> = {
-  admin: "danger",
-  venue_staff: "info",
-  owner: "success",
-};
+import { fmtDate } from "@/lib/utils";
 
 export function UsersPage() {
   const [search, setSearch] = useState("");
