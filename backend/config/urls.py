@@ -20,13 +20,14 @@ urlpatterns = [
     path("api/v1/matching/", include("apps.matching.urls")),
     path("api/v1/claims/", include("apps.claims.urls")),
     path("api/v1/notifications/", include("apps.notifications.urls")),
+    path("api/v1/admin/", include("apps.admin_panel.urls")),
 ]
 
 if settings.DEBUG:
-    from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerUIView
+    from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
     urlpatterns += [
         path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-        path("api/docs/", SpectacularSwaggerUIView.as_view(url_name="schema"), name="swagger-ui"),
+        path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     ]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

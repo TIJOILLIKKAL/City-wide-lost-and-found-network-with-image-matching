@@ -29,6 +29,18 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "role", "is_verified", "created_at"]
 
 
+class AdminUserSerializer(serializers.ModelSerializer):
+    venue_name = serializers.CharField(source="venue.name", read_only=True, allow_null=True)
+
+    class Meta:
+        model = User
+        fields = [
+            "id", "email", "full_name", "phone", "role",
+            "venue", "venue_name", "is_active", "is_verified", "created_at",
+        ]
+        read_only_fields = ["id", "email", "created_at", "venue_name"]
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):

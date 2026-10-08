@@ -21,3 +21,11 @@ class IsVenueStaffOrAdmin(BasePermission):
         if request.user.is_admin:
             return True
         return request.user.is_venue_staff and request.user.venue_id == obj.pk
+
+
+class IsAdminOrVenueStaff(BasePermission):
+    """Allow admin or any active venue staff member."""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and (
+            request.user.is_admin or request.user.is_venue_staff
+        )
