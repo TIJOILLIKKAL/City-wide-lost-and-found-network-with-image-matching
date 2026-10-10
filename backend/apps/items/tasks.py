@@ -56,7 +56,7 @@ def generate_embedding(self, item_id: str, item_type: str):
 
 @shared_task
 def find_matches(item_id: str, item_type: str):
-    """Search Elasticsearch for matches, cache results, and push WebSocket notification."""
+    """Search ES for matches, cache results, create DB notifications, push WS + email."""
     from apps.matching.engine import run_match_search
     from core.db.redis_client import get_redis_client
     from channels.layers import get_channel_layer
@@ -65,31 +65,108 @@ def find_matches(item_id: str, item_type: str):
 
     matches = run_match_search(item_id, item_type, top_k=10)
 
-    # Cache for 24h regardless of match count (empty list is a valid cached result)
     redis = get_redis_client()
     redis.setex(f"matches:{item_type}:{item_id}", 86400, json.dumps(matches))
 
     if not matches:
         return
 
-    # Resolve the item reporter to know which user group to notify
-    item = get_found_item(item_id) if item_type == "found" else get_lost_item(item_id)
-    if not item:
-        return
-
-    user_id = item.get("reported_by")
-    if not user_id:
+    source_item = get_found_item(item_id) if item_type == "found" else get_lost_item(item_id)
+    if not source_item:
         return
 
     channel_layer = get_channel_layer()
+
+    if item_type == "found":
+        # Found item uploaded by venue → notify each matched lost-item owner
+        for match in matches:
+            lost_item = get_lost_item(match["item_id"])
+            if not lost_item:
+                continue
+            owner_id = lost_item.get("reported_by")
+            if not owner_id:
+                continue
+            _notify_user(
+                user_id=owner_id,
+                notif_type="match_found",
+                title="Possible match for your lost item!",
+                message=f"A found item \"{source_item.get('title')}\" may be yours — {int(match['score'] * 100)}% match.",
+                data={"found_item_id": item_id, "lost_item_id": match["item_id"], "score": match["score"]},
+                channel_layer=channel_layer,
+                found_item_id=item_id,
+            )
+    else:
+        # Lost item reported → notify the owner about found matches
+        owner_id = source_item.get("reported_by")
+        if owner_id and matches:
+            top = matches[0]
+            _notify_user(
+                user_id=owner_id,
+                notif_type="match_found",
+                title="Matches found for your lost item!",
+                message=f"We found {len(matches)} potential match(es) for \"{source_item.get('title')}\". Best match: {int(top['score'] * 100)}%.",
+                data={"lost_item_id": item_id, "match_count": len(matches)},
+                channel_layer=channel_layer,
+                found_item_id=top.get("item_id"),
+            )
+
+    logger.info("find_matches done for %s %s — %d matches.", item_type, item_id, len(matches))
+
+
+def _notify_user(user_id: int, notif_type: str, title: str, message: str, data: dict,
+                 channel_layer, found_item_id: str = None):
+    """Save DB notification, push WebSocket event, and send email."""
+    from django.contrib.auth import get_user_model
+    from django.core.mail import send_mail
+    from django.conf import settings
+    from apps.notifications.models import Notification
+
+    User = get_user_model()
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return
+
+    # Persist notification
+    notif = Notification.objects.create(
+        user=user,
+        notification_type=notif_type,
+        title=title,
+        message=message,
+        data=data,
+    )
+
+    # WebSocket push
     if channel_layer:
-        async_to_sync(channel_layer.group_send)(
-            f"user_{user_id}",
-            {
-                "type": "notify_match",
-                "item_id": item_id,
-                "item_type": item_type,
-                "match_count": len(matches),
-            },
-        )
-    logger.info("Notified user %s of %d matches for %s %s.", user_id, len(matches), item_type, item_id)
+        try:
+            from asgiref.sync import async_to_sync
+            async_to_sync(channel_layer.group_send)(
+                f"user_{user_id}",
+                {
+                    "type": "notify_match",
+                    "item_id": data.get("lost_item_id") or data.get("found_item_id", ""),
+                    "item_type": "lost",
+                    "match_count": data.get("match_count", 1),
+                    "notification_id": notif.id,
+                    "title": title,
+                    "message": message,
+                },
+            )
+        except Exception as exc:
+            logger.warning("WS push failed for user %s: %s", user_id, exc)
+
+    # Email notification
+    if user.email:
+        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+        link = f"{frontend_url}/items/lost/{data.get('lost_item_id', '')}"
+        try:
+            send_mail(
+                subject=title,
+                message=f"{message}\n\nView your item: {link}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
+            logger.info("Email sent to %s for notification %s.", user.email, notif.id)
+        except Exception as exc:
+            logger.warning("Email failed for user %s: %s", user_id, exc)

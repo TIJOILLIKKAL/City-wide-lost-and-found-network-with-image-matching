@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Package, Search, ClipboardList, MapPin, TrendingUp, Clock, CheckCircle } from "lucide-react";
+import { Package, Search, ClipboardList, MapPin, TrendingUp, Clock, CheckCircle, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -114,6 +114,11 @@ function OwnerDashboard() {
     queryFn: () => itemsApi.listLostItems({ limit: 5 }),
   });
 
+  const { data: recentFound } = useQuery({
+    queryKey: ["found-items", "dashboard"],
+    queryFn: () => itemsApi.listFoundItems({ status: "available", limit: 6 }),
+  });
+
   const { data: claims } = useQuery({
     queryKey: ["my-claims"],
     queryFn: () => claimsApi.listClaims({ limit: 5 }),
@@ -149,7 +154,53 @@ function OwnerDashboard() {
         />
       </div>
 
-      {/* Recent lost items */}
+      {/* Recently found items */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Recently Found Items
+            </CardTitle>
+            <CardDescription>Latest items turned in at venues — is yours here?</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/items/found">Browse all</Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {(recentFound?.results.length ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No found items available right now.</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {recentFound?.results.map((item) => (
+                <Link
+                  key={item.id}
+                  to={`/items/found/${item.id}`}
+                  className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                >
+                  <div className="h-12 w-12 rounded-md bg-muted overflow-hidden shrink-0">
+                    {item.image_url ? (
+                      <img src={item.image_url} alt={item.title} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center">
+                        <Package className="h-5 w-5 text-muted-foreground/40" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{item.title}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{item.category}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(item.found_at).toLocaleDateString()}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* My lost items */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -171,7 +222,11 @@ function OwnerDashboard() {
           )}
           <div className="space-y-3">
             {lostItems?.results.map((item) => (
-              <div key={item.id} className="flex items-center justify-between py-2 border-b last:border-0">
+              <Link
+                key={item.id}
+                to={`/items/lost/${item.id}`}
+                className="flex items-center justify-between py-2 border-b last:border-0 hover:bg-muted/30 -mx-1 px-1 rounded transition-colors"
+              >
                 <div>
                   <p className="text-sm font-medium">{item.title}</p>
                   <p className="text-xs text-muted-foreground">{item.category} · Lost {new Date(item.lost_at).toLocaleDateString()}</p>
@@ -179,7 +234,7 @@ function OwnerDashboard() {
                 <Badge variant={item.status === "found" ? "success" : item.status === "searching" ? "warning" : "secondary"}>
                   {item.status}
                 </Badge>
-              </div>
+              </Link>
             ))}
           </div>
         </CardContent>

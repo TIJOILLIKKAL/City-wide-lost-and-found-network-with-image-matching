@@ -13,6 +13,7 @@ interface AuthState {
   register: (email: string, password: string, fullName: string, phone?: string, role?: UserRole) => Promise<void>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
+  setUser: (user: User) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -62,6 +63,8 @@ export const useAuthStore = create<AuthState>()(
           set({ user: null, isAuthenticated: false });
         }
       },
+
+      setUser: (user) => set({ user }),
     }),
     {
       name: "auth",

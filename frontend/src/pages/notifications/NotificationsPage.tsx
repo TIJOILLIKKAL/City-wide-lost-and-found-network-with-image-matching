@@ -1,13 +1,31 @@
 import { Link } from "react-router-dom";
 import { Bell, Sparkles, ClipboardList, CheckCheck } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNotificationStore } from "@/store/notificationStore";
-import type { WsEvent } from "@/types";
+import { notificationsApi, type ApiNotification } from "@/api/notifications";
 
 export function NotificationsPage() {
-  const { notifications, unreadCount, markAllRead, markRead } = useNotificationStore();
+  const qc = useQueryClient();
+  const clearUnread = useNotificationStore((s) => s.markAllRead);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: notificationsApi.list,
+  });
+
+  const markAllMutation = useMutation({
+    mutationFn: () => notificationsApi.markRead(),
+    onSuccess: () => {
+      clearUnread();
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
+  const unread = data?.unread_count ?? 0;
+  const notifications = data?.results ?? [];
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -15,18 +33,29 @@ export function NotificationsPage() {
         <div>
           <h1 className="text-3xl font-bold">Notifications</h1>
           <p className="text-muted-foreground mt-1">
-            {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+            {unread > 0 ? `${unread} unread` : "All caught up"}
           </p>
         </div>
-        {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={markAllRead}>
+        {unread > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => markAllMutation.mutate()}
+            disabled={markAllMutation.isPending}
+          >
             <CheckCheck className="h-4 w-4 mr-2" />
             Mark all read
           </Button>
         )}
       </div>
 
-      {notifications.length === 0 ? (
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-20 rounded-lg bg-muted animate-pulse" />
+          ))}
+        </div>
+      ) : notifications.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Bell className="h-12 w-12 text-muted-foreground/40 mb-4" />
           <h3 className="font-semibold text-lg mb-1">No notifications yet</h3>
@@ -39,10 +68,11 @@ export function NotificationsPage() {
           {notifications.map((n) => (
             <NotificationCard
               key={n.id}
-              event={n.event}
-              read={n.read}
-              timestamp={n.timestamp}
-              onRead={() => markRead(n.id)}
+              notification={n}
+              onRead={() => {
+                notificationsApi.markRead([n.id]);
+                qc.invalidateQueries({ queryKey: ["notifications"] });
+              }}
             />
           ))}
         </div>
@@ -52,33 +82,29 @@ export function NotificationsPage() {
 }
 
 function NotificationCard({
-  event,
-  read,
-  timestamp,
+  notification: n,
   onRead,
 }: {
-  event: WsEvent;
-  read: boolean;
-  timestamp: string;
+  notification: ApiNotification;
   onRead: () => void;
 }) {
-  const { icon, title, body, to } = renderEvent(event);
+  const { icon, to } = renderNotification(n);
 
   return (
-    <Link to={to} onClick={onRead}>
-      <Card className={`hover:shadow-md transition-shadow ${!read ? "border-primary/30 bg-primary/5" : ""}`}>
+    <Link to={to} onClick={!n.is_read ? onRead : undefined}>
+      <Card className={`hover:shadow-md transition-shadow ${!n.is_read ? "border-primary/30 bg-primary/5" : ""}`}>
         <CardContent className="p-4 flex items-start gap-3">
-          <div className={`p-2 rounded-lg shrink-0 ${!read ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+          <div className={`p-2 rounded-lg shrink-0 ${!n.is_read ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
             {icon}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold">{title}</p>
-              {!read && <Badge variant="default" className="text-xs h-4 px-1.5">New</Badge>}
+              <p className="text-sm font-semibold">{n.title}</p>
+              {!n.is_read && <Badge variant="default" className="text-xs h-4 px-1.5">New</Badge>}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">{body}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {new Date(timestamp).toLocaleString()}
+              {new Date(n.created_at).toLocaleString()}
             </p>
           </div>
         </CardContent>
@@ -87,33 +113,22 @@ function NotificationCard({
   );
 }
 
-function renderEvent(event: WsEvent): {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-  to: string;
-} {
-  switch (event.type) {
-    case "match":
+function renderNotification(n: ApiNotification): { icon: React.ReactNode; to: string } {
+  const lostId = (n.data.lost_item_id as string) || "";
+  const foundId = (n.data.found_item_id as string) || "";
+
+  switch (n.type) {
+    case "match_found":
       return {
         icon: <Sparkles className="h-4 w-4" />,
-        title: "AI Match Found",
-        body: `${event.match_count} potential match${event.match_count !== 1 ? "es" : ""} found for your ${event.item_type} item.`,
-        to: `/items/${event.item_type}/${event.item_id}`,
+        to: lostId ? `/items/lost/${lostId}` : "/items/found",
       };
-    case "claim_status":
+    case "claim_update":
       return {
         icon: <ClipboardList className="h-4 w-4" />,
-        title: "Claim Status Updated",
-        body: `Your claim #${event.claim_id} is now: ${event.status.replace(/_/g, " ")}.`,
-        to: `/claims/${event.claim_id}`,
+        to: `/claims/${(n.data.claim_id as string) || ""}`,
       };
-    case "new_claim":
-      return {
-        icon: <ClipboardList className="h-4 w-4" />,
-        title: "New Claim Received",
-        body: `Claim #${event.claim_id} needs review at your venue.`,
-        to: `/claims/${event.claim_id}`,
-      };
+    default:
+      return { icon: <Bell className="h-4 w-4" />, to: "/notifications" };
   }
 }

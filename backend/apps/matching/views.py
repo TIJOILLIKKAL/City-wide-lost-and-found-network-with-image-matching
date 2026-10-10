@@ -100,6 +100,8 @@ class ImageSearchView(APIView):
             logger.error("Image search ES error: %s", exc)
             return Response({"detail": "Search service unavailable."}, status=503)
 
+        hits = response["hits"]["hits"]
+        max_score = max((hit["_score"] or 0 for hit in hits), default=1) or 1
         results = [
             {
                 "item_id": hit["_id"],
@@ -108,10 +110,10 @@ class ImageSearchView(APIView):
                 "category": hit["_source"].get("category"),
                 "venue_id": hit["_source"].get("venue_id"),
                 "status": hit["_source"].get("status"),
-                "score": round(hit["_score"] or 0, 4),
+                "score": round((hit["_score"] or 0) / max_score, 4),
                 "reported_at": hit["_source"].get("reported_at"),
             }
-            for hit in response["hits"]["hits"]
+            for hit in hits
         ]
         return Response({"results": results, "total": len(results)})
 

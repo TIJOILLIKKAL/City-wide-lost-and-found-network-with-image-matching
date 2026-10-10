@@ -1,6 +1,7 @@
-from rest_framework import viewsets, status, filters
+from rest_framework import generics, viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import Venue
@@ -11,6 +12,23 @@ from .serializers import (
 )
 from .permissions import IsAdminOrReadOnly, IsVenueStaffOrAdmin
 from .filters import VenueFilter
+
+
+class MyVenueView(generics.RetrieveUpdateAPIView):
+    """Venue staff can view and partially update their own venue."""
+    permission_classes = [IsAuthenticated]
+    serializer_class = VenueDetailSerializer
+
+    def get_object(self):
+        user = self.request.user
+        if not user.venue_id:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("You are not assigned to a venue.")
+        return Venue.objects.prefetch_related("hours", "staff").get(pk=user.venue_id)
+
+    def get_serializer(self, *args, **kwargs):
+        kwargs.setdefault("partial", True)
+        return super().get_serializer(*args, **kwargs)
 
 
 @extend_schema_view(

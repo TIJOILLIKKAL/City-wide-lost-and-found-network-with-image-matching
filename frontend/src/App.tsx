@@ -21,6 +21,9 @@ const ClaimsListPage = lazy(() => import("@/pages/claims/ClaimsListPage").then((
 const SubmitClaimPage = lazy(() => import("@/pages/claims/SubmitClaimPage").then((m) => ({ default: m.SubmitClaimPage })));
 const ClaimDetailPage = lazy(() => import("@/pages/claims/ClaimDetailPage").then((m) => ({ default: m.ClaimDetailPage })));
 const NotificationsPage = lazy(() => import("@/pages/notifications/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
+const ChatPage = lazy(() => import("@/pages/chat/ChatPage").then((m) => ({ default: m.ChatPage })));
+const ChatListPage = lazy(() => import("@/pages/chat/ChatListPage").then((m) => ({ default: m.ChatListPage })));
+const ProfilePage = lazy(() => import("@/pages/profile/ProfilePage").then((m) => ({ default: m.ProfilePage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -75,6 +78,13 @@ export default function App() {
 
                 {/* Notifications */}
                 <Route path="/notifications" element={<NotificationsPage />} />
+
+                {/* Chat */}
+                <Route path="/chat" element={<ChatListPage />} />
+                <Route path="/chat/:claimId" element={<ChatPage />} />
+
+                {/* Profile */}
+                <Route path="/profile" element={<ProfilePage />} />
               </Route>
             </Route>
 

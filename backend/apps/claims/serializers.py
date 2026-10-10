@@ -25,24 +25,38 @@ class ClaimStatusHistorySerializer(serializers.ModelSerializer):
         fields = ["id", "from_status", "to_status", "changed_by_email", "note", "changed_at"]
 
 
+class _ClaimUserSerializer(serializers.Serializer):
+    """Minimal user representation embedded in claim responses."""
+    id = serializers.IntegerField()
+    full_name = serializers.CharField()
+    email = serializers.EmailField()
+    phone = serializers.CharField()
+
+
+class _ClaimVenueSerializer(serializers.Serializer):
+    """Minimal venue representation embedded in claim responses."""
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    slug = serializers.CharField()
+
+
 class ClaimListSerializer(serializers.ModelSerializer):
-    claimant_email = serializers.CharField(source="claimant.email", read_only=True)
-    venue_name = serializers.CharField(source="venue.name", read_only=True)
+    claimant = _ClaimUserSerializer(read_only=True)
+    venue = _ClaimVenueSerializer(read_only=True)
 
     class Meta:
         model = Claim
         fields = [
-            "id", "found_item_id", "lost_item_id", "claimant_email",
-            "venue_name", "status", "delivery_method", "created_at",
+            "id", "found_item_id", "lost_item_id",
+            "claimant", "venue",
+            "status", "delivery_method", "created_at",
         ]
 
 
 class ClaimDetailSerializer(serializers.ModelSerializer):
-    claimant_email = serializers.CharField(source="claimant.email", read_only=True)
-    claimant_name = serializers.CharField(source="claimant.full_name", read_only=True)
-    claimant_phone = serializers.CharField(source="claimant.phone", read_only=True)
-    venue_name = serializers.CharField(source="venue.name", read_only=True)
-    reviewed_by_email = serializers.CharField(source="reviewed_by.email", read_only=True)
+    claimant = _ClaimUserSerializer(read_only=True)
+    venue = _ClaimVenueSerializer(read_only=True)
+    reviewed_by = _ClaimUserSerializer(read_only=True)
     pickup_slot_detail = PickupSlotSerializer(source="pickup_slot", read_only=True)
     history = ClaimStatusHistorySerializer(many=True, read_only=True)
 
@@ -50,16 +64,15 @@ class ClaimDetailSerializer(serializers.ModelSerializer):
         model = Claim
         fields = [
             "id", "found_item_id", "lost_item_id",
-            "claimant_email", "claimant_name", "claimant_phone",
-            "venue", "venue_name",
+            "claimant", "venue",
             "status", "proof_description", "proof_images",
-            "rejection_reason", "reviewed_by_email", "reviewed_at",
+            "rejection_reason", "reviewed_by", "reviewed_at",
             "delivery_method", "pickup_slot", "pickup_slot_detail",
             "delivery_address", "delivery_tracking_id",
             "history", "created_at", "updated_at",
         ]
         read_only_fields = [
-            "status", "reviewed_by_email", "reviewed_at",
+            "status", "reviewed_by", "reviewed_at",
             "rejection_reason", "delivery_tracking_id", "history",
         ]
 

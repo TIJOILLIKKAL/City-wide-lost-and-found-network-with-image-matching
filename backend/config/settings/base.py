@@ -38,6 +38,7 @@ LOCAL_APPS = [
     "apps.claims",
     "apps.notifications",
     "apps.admin_panel",
+    "apps.chat",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -201,6 +202,16 @@ AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
 if AWS_ACCESS_KEY_ID:
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
     MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+
+# Email
+EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = config("EMAIL_HOST", default="")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@lostandfound.com")
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 
 # MongoDB (accessed via core.db.mongo)
 MONGO_URI = config("MONGO_URI", default="mongodb://localhost:27017/")

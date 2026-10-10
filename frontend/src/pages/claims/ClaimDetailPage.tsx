@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, CheckCircle, XCircle, Truck, Package } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { ArrowLeft, Loader2, CheckCircle, XCircle, Truck, Package, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,7 +41,7 @@ export function ClaimDetailPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/claims")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
@@ -58,6 +55,10 @@ export function ClaimDetailPage() {
             Submitted {new Date(claim.created_at).toLocaleDateString()}
           </p>
         </div>
+        <Button variant="outline" size="sm" onClick={() => navigate(`/chat/${claim.id}`)} className="gap-2 shrink-0">
+          <MessageSquare className="h-4 w-4" />
+          Chat
+        </Button>
       </div>
 
       {/* Item + claimant info */}
@@ -119,76 +120,70 @@ export function ClaimDetailPage() {
 
 // ─── Staff review ─────────────────────────────────────────────────────────────
 
-const reviewSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("approve") }),
-  z.object({ action: z.literal("reject"), rejection_reason: z.string().min(5, "Reason required") }),
-]);
-type ReviewForm = z.infer<typeof reviewSchema>;
-
 function ReviewPanel({ claimId, onDone }: { claimId: number; onDone: () => void }) {
   const [action, setAction] = useState<"approve" | "reject">("approve");
-  const { register, handleSubmit, formState: { errors } } = useForm<ReviewForm>({
-    resolver: zodResolver(reviewSchema),
-  });
+  const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState("");
 
   const mutation = useMutation({
-    mutationFn: (data: ReviewForm) =>
-      claimsApi.reviewClaim(
-        claimId,
-        data.action,
-        data.action === "reject" ? (data as { rejection_reason: string }).rejection_reason : undefined
-      ),
+    mutationFn: () =>
+      claimsApi.reviewClaim(claimId, action, action === "reject" ? reason : undefined),
     onSuccess: onDone,
   });
+
+  const handleConfirm = () => {
+    if (action === "reject" && reason.trim().length < 5) {
+      setReasonError("Please provide a reason (at least 5 characters).");
+      return;
+    }
+    setReasonError("");
+    mutation.mutate();
+  };
 
   return (
     <Card className="border-primary/30">
       <CardHeader><CardTitle className="text-base">Review Claim</CardTitle></CardHeader>
-      <CardContent>
-        <form
-          onSubmit={handleSubmit((d) => mutation.mutate({ ...d, action } as ReviewForm))}
-          className="space-y-4"
-        >
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant={action === "approve" ? "default" : "outline"}
-              onClick={() => setAction("approve")}
-              className="flex-1"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" /> Approve
-            </Button>
-            <Button
-              type="button"
-              variant={action === "reject" ? "destructive" : "outline"}
-              onClick={() => setAction("reject")}
-              className="flex-1"
-            >
-              <XCircle className="h-4 w-4 mr-2" /> Reject
-            </Button>
-          </div>
-
-          {action === "reject" && (
-            <div className="space-y-1.5">
-              <Label>Reason for rejection *</Label>
-              <Textarea
-                rows={3}
-                placeholder="Explain why the claim is being rejected…"
-                {...register("rejection_reason" as never)}
-              />
-              {"rejection_reason" in (errors as object) && (
-                <p className="text-xs text-destructive">
-                  {(errors as { rejection_reason?: { message?: string } }).rejection_reason?.message}
-                </p>
-              )}
-            </div>
-          )}
-
-          <Button type="submit" disabled={mutation.isPending} variant={action === "reject" ? "destructive" : "default"}>
-            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Confirm {action === "approve" ? "Approval" : "Rejection"}
+      <CardContent className="space-y-4">
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant={action === "approve" ? "default" : "outline"}
+            onClick={() => setAction("approve")}
+            className="flex-1"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" /> Approve
           </Button>
-        </form>
+          <Button
+            type="button"
+            variant={action === "reject" ? "destructive" : "outline"}
+            onClick={() => setAction("reject")}
+            className="flex-1"
+          >
+            <XCircle className="h-4 w-4 mr-2" /> Reject
+          </Button>
+        </div>
+
+        {action === "reject" && (
+          <div className="space-y-1.5">
+            <Label>Reason for rejection *</Label>
+            <Textarea
+              rows={3}
+              placeholder="Explain why the claim is being rejected…"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+            {reasonError && <p className="text-xs text-destructive">{reasonError}</p>}
+          </div>
+        )}
+
+        <Button
+          onClick={handleConfirm}
+          disabled={mutation.isPending}
+          variant={action === "reject" ? "destructive" : "default"}
+        >
+          {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Confirm {action === "approve" ? "Approval" : "Rejection"}
+        </Button>
       </CardContent>
     </Card>
   );

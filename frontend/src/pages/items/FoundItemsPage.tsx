@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { itemsApi } from "@/api/items";
 import { CATEGORIES } from "@/lib/constants";
+import { useIsVenueStaff } from "@/store/authStore";
 import type { FoundItem } from "@/types";
 
 export function FoundItemsPage() {
+  const isVenueStaff = useIsVenueStaff();
   const [category, setCategory] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(isVenueStaff ? "" : "available");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 12;
@@ -29,12 +31,12 @@ export function FoundItemsPage() {
       }),
   });
 
-  const filtered = data?.results.filter((item) =>
+  const filtered = (data?.results ?? []).filter((item) =>
     search
       ? item.title.toLowerCase().includes(search.toLowerCase()) ||
         item.description.toLowerCase().includes(search.toLowerCase())
       : true
-  ) ?? [];
+  );
 
   const totalPages = data ? Math.ceil(data.count / PAGE_SIZE) : 1;
 
@@ -42,17 +44,23 @@ export function FoundItemsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Found Items</h1>
+          <h1 className="text-3xl font-bold">
+            {isVenueStaff ? "Found Items" : "Browse Found Items"}
+          </h1>
           <p className="text-muted-foreground mt-1">
-            {data?.count ?? 0} items logged at your venue
+            {isVenueStaff
+              ? `${data?.count ?? 0} items logged at your venue`
+              : `${data?.count ?? 0} items available across all venues`}
           </p>
         </div>
-        <Button asChild>
-          <Link to="/items/found/new">
-            <Plus className="h-4 w-4 mr-2" />
-            Log Found Item
-          </Link>
-        </Button>
+        {isVenueStaff && (
+          <Button asChild>
+            <Link to="/items/found/new">
+              <Plus className="h-4 w-4 mr-2" />
+              Log Found Item
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -76,16 +84,18 @@ export function FoundItemsPage() {
             <option key={c.value} value={c.value}>{c.label}</option>
           ))}
         </Select>
-        <Select
-          className="w-36"
-          value={status}
-          onChange={(e) => { setStatus(e.target.value); setPage(1); }}
-        >
-          <option value="">All statuses</option>
-          <option value="available">Available</option>
-          <option value="claimed">Claimed</option>
-          <option value="returned">Returned</option>
-        </Select>
+        {isVenueStaff && (
+          <Select
+            className="w-36"
+            value={status}
+            onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+          >
+            <option value="">All statuses</option>
+            <option value="available">Available</option>
+            <option value="claimed">Claimed</option>
+            <option value="returned">Returned</option>
+          </Select>
+        )}
       </div>
 
       {/* Grid */}
@@ -96,7 +106,7 @@ export function FoundItemsPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState />
+        <EmptyState isVenueStaff={isVenueStaff} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((item) => (
@@ -105,15 +115,12 @@ export function FoundItemsPage() {
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-4">
           <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
             Previous
           </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
+          <span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span>
           <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
             Next
           </Button>
@@ -129,11 +136,7 @@ function FoundItemCard({ item }: { item: FoundItem }) {
       <Card className="hover:shadow-md transition-shadow overflow-hidden h-full">
         <div className="aspect-video bg-muted overflow-hidden">
           {item.image_url ? (
-            <img
-              src={item.image_url}
-              alt={item.title}
-              className="w-full h-full object-cover"
-            />
+            <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <Package className="h-10 w-10 text-muted-foreground/40" />
@@ -161,20 +164,22 @@ function FoundItemCard({ item }: { item: FoundItem }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ isVenueStaff }: { isVenueStaff: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <Package className="h-12 w-12 text-muted-foreground/40 mb-4" />
       <h3 className="font-semibold text-lg mb-1">No items found</h3>
       <p className="text-muted-foreground text-sm mb-4">
-        Log a new found item to get started.
+        {isVenueStaff ? "Log a new found item to get started." : "No items available right now. Check back later."}
       </p>
-      <Button asChild>
-        <Link to="/items/found/new">
-          <Plus className="h-4 w-4 mr-2" />
-          Log Found Item
-        </Link>
-      </Button>
+      {isVenueStaff && (
+        <Button asChild>
+          <Link to="/items/found/new">
+            <Plus className="h-4 w-4 mr-2" />
+            Log Found Item
+          </Link>
+        </Button>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Bell, LogOut, MapPin, Package, Search, ClipboardList, LayoutDashboard } from "lucide-react";
+import { Bell, LogOut, MapPin, Package, Search, ClipboardList, LayoutDashboard, UserCircle, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore, useUser, useIsVenueStaff } from "@/store/authStore";
@@ -27,13 +27,13 @@ export function Navbar() {
 
         <nav className="hidden md:flex items-center gap-1">
           <NavLink to="/dashboard" icon={<LayoutDashboard className="h-4 w-4" />} label="Dashboard" />
-          {isVenueStaff ? (
-            <NavLink to="/items/found" icon={<Package className="h-4 w-4" />} label="Found Items" />
-          ) : (
+          <NavLink to="/items/found" icon={<Package className="h-4 w-4" />} label={isVenueStaff ? "Found Items" : "Browse Found"} />
+          {!isVenueStaff && (
             <NavLink to="/items/lost" icon={<Package className="h-4 w-4" />} label="My Lost Items" />
           )}
           <NavLink to="/search" icon={<Search className="h-4 w-4" />} label="Search" />
           <NavLink to="/claims" icon={<ClipboardList className="h-4 w-4" />} label="Claims" />
+          <NavLink to="/chat" icon={<MessageSquare className="h-4 w-4" />} label="Chats" />
         </nav>
 
         <div className="flex items-center gap-2">
@@ -48,6 +48,12 @@ export function Navbar() {
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </Badge>
               )}
+            </Link>
+          </Button>
+
+          <Button variant="ghost" size="icon" asChild title="Profile">
+            <Link to="/profile">
+              <UserCircle className="h-5 w-5" />
             </Link>
           </Button>
 

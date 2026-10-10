@@ -78,11 +78,15 @@ def run_match_search(item_id: str, item_type: str, top_k: int = 10) -> List[Dict
         logger.error("ES search failed for %s %s: %s", item_type, item_id, exc)
         return []
 
+    hits = response["hits"]["hits"]
+    max_score = max((hit["_score"] or 0 for hit in hits), default=1) or 1
+
     matches = []
-    for hit in response["hits"]["hits"]:
-        score = hit["_score"] or 0
-        if score < MIN_SCORE_THRESHOLD:
+    for hit in hits:
+        raw = hit["_score"] or 0
+        if raw < MIN_SCORE_THRESHOLD:
             continue
+        normalized = round(raw / max_score, 4)
         matches.append({
             "item_id": hit["_id"],
             "item_type": hit["_source"].get("item_type"),
@@ -91,7 +95,7 @@ def run_match_search(item_id: str, item_type: str, top_k: int = 10) -> List[Dict
             "category": hit["_source"].get("category"),
             "venue_id": hit["_source"].get("venue_id"),
             "status": hit["_source"].get("status"),
-            "score": round(score, 4),
+            "score": normalized,
             "reported_at": hit["_source"].get("reported_at"),
         })
 
@@ -126,16 +130,18 @@ def search_by_image(image_url: str, item_type_filter: str = "found", top_k: int 
         logger.error("ES image search failed: %s", exc)
         return []
 
+    hits = response["hits"]["hits"]
+    max_score = max((hit["_score"] or 0 for hit in hits), default=1) or 1
     return [
         {
             "item_id": hit["_id"],
             "title": hit["_source"].get("title"),
             "category": hit["_source"].get("category"),
             "venue_id": hit["_source"].get("venue_id"),
-            "score": round(hit["_score"] or 0, 4),
+            "score": round((hit["_score"] or 0) / max_score, 4),
             "reported_at": hit["_source"].get("reported_at"),
         }
-        for hit in response["hits"]["hits"]
+        for hit in hits
         if (hit["_score"] or 0) >= MIN_SCORE_THRESHOLD
     ]
 
@@ -182,6 +188,8 @@ def search_by_text(query: str, item_type_filter: str = "found", category: str = 
         logger.error("ES text search failed: %s", exc)
         return []
 
+    hits = response["hits"]["hits"]
+    max_score = max((hit["_score"] or 0 for hit in hits), default=1) or 1
     return [
         {
             "item_id": hit["_id"],
@@ -189,8 +197,8 @@ def search_by_text(query: str, item_type_filter: str = "found", category: str = 
             "description": hit["_source"].get("description"),
             "category": hit["_source"].get("category"),
             "venue_id": hit["_source"].get("venue_id"),
-            "score": round(hit["_score"] or 0, 4),
+            "score": round((hit["_score"] or 0) / max_score, 4),
             "reported_at": hit["_source"].get("reported_at"),
         }
-        for hit in response["hits"]["hits"]
+        for hit in hits
     ]

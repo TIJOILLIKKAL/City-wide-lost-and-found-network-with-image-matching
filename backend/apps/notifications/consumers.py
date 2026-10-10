@@ -53,8 +53,11 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             "type": "match",
             "item_id": event["item_id"],
-            "item_type": event["item_type"],
+            "item_type": event.get("item_type", "lost"),
             "match_count": event["match_count"],
+            "notification_id": event.get("notification_id"),
+            "title": event.get("title", "Match found"),
+            "message": event.get("message", ""),
         }))
 
     async def notify_claim_status(self, event):
@@ -69,4 +72,15 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             "type": "new_claim",
             "claim_id": event["claim_id"],
             "venue_id": event["venue_id"],
+        }))
+
+    async def notify_chat_message(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "chat_message",
+            "room_id": event["room_id"],
+            "claim_id": event["claim_id"],
+            "sender_id": event["sender_id"],
+            "sender_name": event["sender_name"],
+            "text": event["text"],
+            "created_at": event["created_at"],
         }))

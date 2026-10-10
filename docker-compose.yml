@@ -8,6 +8,12 @@ x-backend-base: &backend-base
       INSTALL_AI: "true"
   env_file:
     - ./backend/.env
+  environment:
+    # Set HOME so open_clip/torch cache to /tmp/.cache instead of /nonexistent
+    HOME: /tmp
+    XDG_CACHE_HOME: /tmp/.cache
+    TORCH_HOME: /tmp/.cache/torch
+    HF_HOME: /tmp/.cache/huggingface
   volumes:
     - ./backend:/app
   depends_on:
@@ -84,8 +90,8 @@ services:
 
   backend:
     <<: *backend-base
-    # Entrypoint runs: migrate → collectstatic → create_defaults → runserver
-    command: python manage.py runserver 0.0.0.0:8000
+    # Entrypoint runs: migrate → collectstatic → create_defaults → uvicorn
+    command: uvicorn config.asgi:application --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
     healthcheck:
