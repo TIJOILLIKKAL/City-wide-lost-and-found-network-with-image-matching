@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ImageDropzone } from "@/components/items/ImageDropzone";
+import { MultiImageUpload } from "@/components/items/MultiImageUpload";
 import { itemsApi } from "@/api/items";
 import { CATEGORIES } from "@/lib/constants";
 
@@ -30,7 +30,7 @@ type FormData = z.infer<typeof schema>;
 export function ReportLostItemPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [image, setImage] = useState<File | null>(null);
+  const [images, setImages] = useState<File[]>([]);
 
   const {
     register,
@@ -48,8 +48,8 @@ export function ReportLostItemPage() {
 
   const onSubmit = (data: FormData) => {
     const fd = new globalThis.FormData();
-    Object.entries(data).forEach(([k, v]) => { if (v) fd.append(k, v); });
-    if (image) fd.append("image", image);
+    Object.entries(data).forEach(([k, v]) => { if (v) fd.append(k, v as string); });
+    images.forEach((img) => fd.append("images", img));
     mutation.mutate(fd as unknown as FormData);
   };
 
@@ -69,11 +69,11 @@ export function ReportLostItemPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Photo</CardTitle>
-          <CardDescription>Optional but strongly recommended — used for AI image matching</CardDescription>
+          <CardTitle className="text-base">Photos</CardTitle>
+          <CardDescription>Optional but strongly recommended — more photos improve AI match accuracy</CardDescription>
         </CardHeader>
         <CardContent>
-          <ImageDropzone value={image} onChange={setImage} />
+          <MultiImageUpload values={images} onChange={setImages} maxFiles={5} />
         </CardContent>
       </Card>
 

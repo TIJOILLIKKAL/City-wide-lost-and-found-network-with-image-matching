@@ -84,14 +84,20 @@ class FoundItemListCreateView(APIView):
         if not venue_id:
             return Response({"detail": "venue_id is required."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Accept multiple images via "images" key, fall back to single "image"
+        image_files = request.FILES.getlist("images") or (
+            [request.FILES["image"]] if "image" in request.FILES else []
+        )
+        if not image_files:
+            return Response({"detail": "At least one image is required."}, status=status.HTTP_400_BAD_REQUEST)
+
         item = create_found_item(
             data=serializer.validated_data,
-            image_file=request.FILES["image"],
+            image_files=image_files,
             venue_id=int(venue_id),
             reported_by=request.user.id,
         )
 
-        # Kick off async CLIP embedding
         generate_embedding.delay(item["_id"], "found")
 
         return Response(_format_item(item), status=status.HTTP_201_CREATED)
@@ -159,15 +165,16 @@ class LostItemListCreateView(APIView):
         serializer = LostItemCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        image_file = request.FILES.get("image")
+        image_files = request.FILES.getlist("images") or (
+            [request.FILES["image"]] if "image" in request.FILES else []
+        )
         item = create_lost_item(
             data=serializer.validated_data,
-            image_file=image_file,
+            image_files=image_files,
             reported_by=request.user.id,
         )
 
-        # Kick off embedding only if an image was provided
-        if image_file:
+        if image_files:
             generate_embedding.delay(item["_id"], "lost")
 
         return Response(_format_item(item), status=status.HTTP_201_CREATED)
@@ -210,12 +217,14 @@ class LostItemDetailView(APIView):
         if new_status and new_status not in ("searching", "found", "closed"):
             return Response({"detail": "Invalid status."}, status=status.HTTP_400_BAD_REQUEST)
 
-        image_file = request.FILES.get("image")
-        updated = update_lost_item(item_id, data, image_file=image_file)
+        image_files = request.FILES.getlist("images") or (
+            [request.FILES["image"]] if "image" in request.FILES else []
+        )
+        updated = update_lost_item(item_id, data, image_files=image_files)
         if not updated:
             return Response({"detail": "Update failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        if image_file:
+        if image_files:
             from .tasks import generate_embedding
             generate_embedding.delay(item_id, "lost")
 

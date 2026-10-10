@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def upload_item_image(image_file, item_type: str) -> tuple[str, str]:
-    """Upload image to storage (S3 in prod, local in dev). Returns (url, storage_key)."""
+    """Upload a single image. Returns (url, storage_key)."""
     ext = image_file.name.rsplit(".", 1)[-1].lower() if "." in image_file.name else "jpg"
     key = f"items/{item_type}/{uuid.uuid4().hex}.{ext}"
     saved_key = default_storage.save(key, ContentFile(image_file.read()))
@@ -21,8 +21,20 @@ def upload_item_image(image_file, item_type: str) -> tuple[str, str]:
     return url, saved_key
 
 
-def create_found_item(data: dict, image_file, venue_id: int, reported_by: int) -> dict:
-    image_url, image_key = upload_item_image(image_file, "found")
+def upload_item_images(image_files: list, item_type: str) -> list[dict]:
+    """Upload multiple images. Returns list of {url, key} dicts."""
+    result = []
+    for f in image_files:
+        if f:
+            url, key = upload_item_image(f, item_type)
+            result.append({"url": url, "key": key})
+    return result
+
+
+def create_found_item(data: dict, image_files: list, venue_id: int, reported_by: int) -> dict:
+    images = upload_item_images(image_files, "found")
+    primary_url = images[0]["url"] if images else ""
+    primary_key = images[0]["key"] if images else ""
     now = datetime.now(timezone.utc)
 
     document = {
@@ -34,8 +46,9 @@ def create_found_item(data: dict, image_file, venue_id: int, reported_by: int) -
         "category": data["category"],
         "color": data.get("color", ""),
         "brand": data.get("brand", ""),
-        "image_url": image_url,
-        "image_key": image_key,
+        "images": images,
+        "image_url": primary_url,
+        "image_key": primary_key,
         "found_at": data["found_at"],
         "found_location": data.get("found_location", ""),
         "attributes": data.get("attributes", {}),
@@ -50,12 +63,11 @@ def create_found_item(data: dict, image_file, venue_id: int, reported_by: int) -
     return document
 
 
-def create_lost_item(data: dict, image_file, reported_by: int) -> dict:
+def create_lost_item(data: dict, image_files: list, reported_by: int) -> dict:
     now = datetime.now(timezone.utc)
-    image_url, image_key = "", ""
-
-    if image_file:
-        image_url, image_key = upload_item_image(image_file, "lost")
+    images = upload_item_images(image_files, "lost") if image_files else []
+    primary_url = images[0]["url"] if images else ""
+    primary_key = images[0]["key"] if images else ""
 
     document = {
         "item_type": "lost",
@@ -65,13 +77,14 @@ def create_lost_item(data: dict, image_file, reported_by: int) -> dict:
         "category": data["category"],
         "color": data.get("color", ""),
         "brand": data.get("brand", ""),
-        "image_url": image_url,
-        "image_key": image_key,
+        "images": images,
+        "image_url": primary_url,
+        "image_key": primary_key,
         "lost_at": data["lost_at"],
         "lost_location": data.get("lost_location", ""),
         "attributes": data.get("attributes", {}),
         "status": "searching",
-        "embedding_status": "pending" if image_url else "skipped",
+        "embedding_status": "pending" if primary_url else "skipped",
         "created_at": now,
         "updated_at": now,
     }
@@ -101,18 +114,20 @@ def get_lost_item(item_id: str) -> dict | None:
     return doc
 
 
-def update_lost_item(item_id: str, data: dict, image_file=None) -> dict | None:
+def update_lost_item(item_id: str, data: dict, image_files: list = None) -> dict | None:
     try:
         oid = ObjectId(item_id)
     except (InvalidId, TypeError):
         return None
 
     updates = {k: v for k, v in data.items() if v is not None}
-    if image_file:
-        image_url, image_key = upload_item_image(image_file, "lost")
-        updates["image_url"] = image_url
-        updates["image_key"] = image_key
-        updates["embedding_status"] = "pending"
+    if image_files:
+        images = upload_item_images(image_files, "lost")
+        if images:
+            updates["images"] = images
+            updates["image_url"] = images[0]["url"]
+            updates["image_key"] = images[0]["key"]
+            updates["embedding_status"] = "pending"
     updates["updated_at"] = datetime.now(timezone.utc)
 
     lost_items_collection().update_one({"_id": oid}, {"$set": updates})

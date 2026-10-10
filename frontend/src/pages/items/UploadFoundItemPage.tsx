@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ImageDropzone } from "@/components/items/ImageDropzone";
+import { MultiImageUpload } from "@/components/items/MultiImageUpload";
 import { itemsApi } from "@/api/items";
 import { CATEGORIES } from "@/lib/constants";
 
@@ -30,7 +30,7 @@ type FormData = z.infer<typeof schema>;
 export function UploadFoundItemPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [image, setImage] = useState<File | null>(null);
+  const [images, setImages] = useState<File[]>([]);
   const [imageError, setImageError] = useState("");
 
   const {
@@ -48,14 +48,14 @@ export function UploadFoundItemPage() {
   });
 
   const onSubmit = (data: FormData) => {
-    if (!image) {
-      setImageError("A photo of the item is required.");
+    if (images.length === 0) {
+      setImageError("At least one photo is required.");
       return;
     }
     setImageError("");
     const fd = new globalThis.FormData();
-    Object.entries(data).forEach(([k, v]) => { if (v) fd.append(k, v); });
-    fd.append("image", image);
+    Object.entries(data).forEach(([k, v]) => { if (v) fd.append(k, v as string); });
+    images.forEach((img) => fd.append("images", img));
     mutation.mutate(fd as unknown as FormData);
   };
 
@@ -73,10 +73,10 @@ export function UploadFoundItemPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Item Photo</CardTitle>
+          <CardTitle className="text-base">Item Photos</CardTitle>
         </CardHeader>
         <CardContent>
-          <ImageDropzone value={image} onChange={setImage} required />
+          <MultiImageUpload values={images} onChange={setImages} maxFiles={5} required />
           {imageError && <p className="text-xs text-destructive mt-2">{imageError}</p>}
         </CardContent>
       </Card>

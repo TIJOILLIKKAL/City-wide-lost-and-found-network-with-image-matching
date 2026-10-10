@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { Search, Image, Type, Loader2, Package, ExternalLink } from "lucide-react";
+import { MatchScoreBadge } from "@/components/items/MatchScoreBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -216,10 +217,9 @@ function SearchResults({ results, itemType }: { results: MatchResult[]; itemType
                   {r.reported_at ? new Date(r.reported_at).toLocaleDateString() : ""}
                 </p>
               </div>
-              <div className="flex flex-col items-center shrink-0">
-                <div className="text-2xl font-bold text-primary">{Math.round(r.score * 100)}%</div>
-                <p className="text-xs text-muted-foreground">match</p>
-                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground mt-2" />
+              <div className="flex flex-col items-center gap-2 shrink-0">
+                <MatchScoreBadge score={r.score} size="sm" />
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>

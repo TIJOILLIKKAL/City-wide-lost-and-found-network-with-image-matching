@@ -2,7 +2,7 @@ import logging
 from celery import shared_task
 
 from core.db.elasticsearch_client import get_es_client, ensure_items_index, ITEMS_INDEX
-from core.ai.clip_encoder import encode_image_from_url, encode_text
+from core.ai.clip_encoder import encode_image_from_url, encode_images_averaged, encode_text
 from .services import get_found_item, get_lost_item, update_embedding_status
 
 logger = logging.getLogger(__name__)
@@ -17,9 +17,16 @@ def generate_embedding(self, item_id: str, item_type: str):
             logger.warning("Item %s (%s) not found, skipping embedding.", item_id, item_type)
             return
 
-        # Generate embedding — image takes priority, fall back to text
+        # Generate embedding — multiple images averaged, single image, or text fallback
         embedding = []
-        if item.get("image_url"):
+        images = item.get("images") or []
+        image_urls = [img["url"] for img in images if img.get("url")]
+
+        if len(image_urls) > 1:
+            embedding = encode_images_averaged(image_urls)
+        elif image_urls:
+            embedding = encode_image_from_url(image_urls[0])
+        elif item.get("image_url"):
             embedding = encode_image_from_url(item["image_url"])
 
         if not embedding:
@@ -57,10 +64,9 @@ def generate_embedding(self, item_id: str, item_type: str):
 @shared_task
 def find_matches(item_id: str, item_type: str):
     """Search ES for matches, cache results, create DB notifications, push WS + email."""
-    from apps.matching.engine import run_match_search
+    from apps.matching.engine import run_match_search, NOTIFICATION_SCORE_THRESHOLD
     from core.db.redis_client import get_redis_client
     from channels.layers import get_channel_layer
-    from asgiref.sync import async_to_sync
     import json
 
     matches = run_match_search(item_id, item_type, top_k=10)
@@ -77,40 +83,48 @@ def find_matches(item_id: str, item_type: str):
 
     channel_layer = get_channel_layer()
 
+    # Only notify for matches above the confidence threshold
+    notify_matches = [m for m in matches if m["score"] >= NOTIFICATION_SCORE_THRESHOLD]
+
     if item_type == "found":
-        # Found item uploaded by venue → notify each matched lost-item owner
-        for match in matches:
+        # Found item uploaded by venue → notify each matched lost-item owner individually
+        for match in notify_matches:
             lost_item = get_lost_item(match["item_id"])
             if not lost_item:
                 continue
             owner_id = lost_item.get("reported_by")
             if not owner_id:
                 continue
+            pct = int(match["score"] * 100)
             _notify_user(
                 user_id=owner_id,
                 notif_type="match_found",
-                title="Possible match for your lost item!",
-                message=f"A found item \"{source_item.get('title')}\" may be yours — {int(match['score'] * 100)}% match.",
+                title=f"{pct}% match found for your lost item!",
+                message=f"A found item \"{source_item.get('title')}\" may be yours — {pct}% confidence.",
                 data={"found_item_id": item_id, "lost_item_id": match["item_id"], "score": match["score"]},
                 channel_layer=channel_layer,
                 found_item_id=item_id,
             )
     else:
-        # Lost item reported → notify the owner about found matches
+        # Lost item reported → notify the owner about each high-confidence found match
         owner_id = source_item.get("reported_by")
-        if owner_id and matches:
-            top = matches[0]
-            _notify_user(
-                user_id=owner_id,
-                notif_type="match_found",
-                title="Matches found for your lost item!",
-                message=f"We found {len(matches)} potential match(es) for \"{source_item.get('title')}\". Best match: {int(top['score'] * 100)}%.",
-                data={"lost_item_id": item_id, "match_count": len(matches)},
-                channel_layer=channel_layer,
-                found_item_id=top.get("item_id"),
-            )
+        if owner_id and notify_matches:
+            for match in notify_matches:
+                pct = int(match["score"] * 100)
+                _notify_user(
+                    user_id=owner_id,
+                    notif_type="match_found",
+                    title=f"{pct}% match: possible found item",
+                    message=f"\"{source_item.get('title')}\" matched a found item with {pct}% confidence.",
+                    data={"lost_item_id": item_id, "found_item_id": match["item_id"], "score": match["score"]},
+                    channel_layer=channel_layer,
+                    found_item_id=match.get("item_id"),
+                )
 
-    logger.info("find_matches done for %s %s — %d matches.", item_type, item_id, len(matches))
+    logger.info(
+        "find_matches done for %s %s — %d total, %d above threshold.",
+        item_type, item_id, len(matches), len(notify_matches),
+    )
 
 
 def _notify_user(user_id: int, notif_type: str, title: str, message: str, data: dict,

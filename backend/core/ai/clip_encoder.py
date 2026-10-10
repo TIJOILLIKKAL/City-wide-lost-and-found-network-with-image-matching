@@ -71,6 +71,33 @@ def encode_image_from_bytes(image_bytes: bytes) -> List[float]:
         return []
 
 
+def encode_images_averaged(image_urls: List[str]) -> List[float]:
+    """Encode multiple images and return their L2-normalised mean embedding."""
+    valid_urls = [u for u in image_urls if u]
+    if not valid_urls:
+        return []
+    if len(valid_urls) == 1:
+        return encode_image_from_url(valid_urls[0])
+
+    embeddings = [encode_image_from_url(u) for u in valid_urls]
+    valid = [e for e in embeddings if e]
+    if not valid:
+        return []
+    if len(valid) == 1:
+        return valid[0]
+
+    try:
+        import numpy as np
+        avg = np.mean(valid, axis=0)
+        norm = float(np.linalg.norm(avg))
+        if norm > 0:
+            avg = avg / norm
+        return avg.tolist()
+    except Exception as exc:
+        logger.error("encode_images_averaged failed: %s", exc)
+        return valid[0]
+
+
 def encode_text(text: str) -> List[float]:
     model, preprocess, device = _load_model()
     if model is None:

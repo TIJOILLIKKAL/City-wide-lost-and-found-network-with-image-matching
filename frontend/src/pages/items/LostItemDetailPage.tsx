@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { itemsApi } from "@/api/items";
 import { matchingApi } from "@/api/matching";
 import { CATEGORIES } from "@/lib/constants";
+import { MatchScoreBadge } from "@/components/items/MatchScoreBadge";
 
 const STATUS_BADGE: Record<string, "success" | "warning" | "secondary"> = {
   searching: "warning",
@@ -32,6 +33,7 @@ export function LostItemDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [form, setForm] = useState({
     title: "", description: "", category: "", color: "", brand: "",
     lost_at: "", lost_location: "",
@@ -184,30 +186,57 @@ export function LostItemDetailPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Image */}
+        {/* Image / Gallery */}
         <div className="space-y-2">
-          <div className="rounded-lg overflow-hidden border bg-muted aspect-square relative">
-            {(previewUrl ?? item.image_url) ? (
-              <img
-                src={previewUrl ?? item.image_url}
-                alt={item.title}
-                className="w-full h-full object-contain"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <MapPin className="h-16 w-16 text-muted-foreground/30" />
-              </div>
-            )}
-          </div>
-          {editing && (
-            <>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImagePick} />
-              <Button variant="outline" size="sm" className="w-full" onClick={() => fileRef.current?.click()}>
-                <Upload className="h-4 w-4 mr-2" />
-                {imageFile ? imageFile.name : "Replace image"}
-              </Button>
-            </>
-          )}
+          {(() => {
+            const allImages = item.images?.length
+              ? item.images.map((img) => img.url)
+              : item.image_url
+              ? [item.image_url]
+              : [];
+            const displayUrl = previewUrl ?? allImages[activeImageIndex] ?? null;
+
+            return (
+              <>
+                <div className="rounded-lg overflow-hidden border bg-muted aspect-square relative">
+                  {displayUrl ? (
+                    <img src={displayUrl} alt={item.title} className="w-full h-full object-contain" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <MapPin className="h-16 w-16 text-muted-foreground/30" />
+                    </div>
+                  )}
+                </div>
+
+                {allImages.length > 1 && !previewUrl && (
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {allImages.map((url, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setActiveImageIndex(i)}
+                        className={`shrink-0 w-14 h-14 rounded-md overflow-hidden border-2 transition-colors ${
+                          i === activeImageIndex ? "border-primary" : "border-transparent"
+                        }`}
+                      >
+                        <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {editing && (
+                  <>
+                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImagePick} />
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => fileRef.current?.click()}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      {imageFile ? imageFile.name : "Replace image"}
+                    </Button>
+                  </>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {/* Details / Edit form */}
@@ -325,10 +354,9 @@ export function LostItemDetailPage() {
                       <p className="text-xs text-muted-foreground line-clamp-1">{match.description}</p>
                       <p className="text-xs text-muted-foreground capitalize mt-0.5">{match.category}</p>
                     </div>
-                    <div className="text-right shrink-0 ml-3">
-                      <p className="text-sm font-semibold text-primary">{Math.round(match.score * 100)}%</p>
-                      <p className="text-xs text-muted-foreground">match</p>
-                      <Badge variant="outline" className="text-xs mt-1">Claim</Badge>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0 ml-3">
+                      <MatchScoreBadge score={match.score} size="sm" />
+                      <Badge variant="outline" className="text-xs">Claim</Badge>
                     </div>
                   </Link>
                 ))}

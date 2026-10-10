@@ -131,16 +131,24 @@ export function FoundItemsPage() {
 }
 
 function FoundItemCard({ item }: { item: FoundItem }) {
+  const imageCount = item.images?.length ?? (item.image_url ? 1 : 0);
+  const primaryUrl = item.images?.[0]?.url ?? item.image_url;
+
   return (
     <Link to={`/items/found/${item.id}`}>
       <Card className="hover:shadow-md transition-shadow overflow-hidden h-full">
-        <div className="aspect-video bg-muted overflow-hidden">
-          {item.image_url ? (
-            <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+        <div className="aspect-video bg-muted overflow-hidden relative">
+          {primaryUrl ? (
+            <img src={primaryUrl} alt={item.title} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <Package className="h-10 w-10 text-muted-foreground/40" />
             </div>
+          )}
+          {imageCount > 1 && (
+            <span className="absolute bottom-1.5 right-1.5 bg-black/60 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+              {imageCount} photos
+            </span>
           )}
         </div>
         <CardContent className="p-4 space-y-2">

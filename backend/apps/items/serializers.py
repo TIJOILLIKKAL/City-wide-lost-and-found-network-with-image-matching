@@ -21,7 +21,7 @@ class FoundItemCreateSerializer(serializers.Serializer):
     category = serializers.ChoiceField(choices=CATEGORY_VALUES)
     color = serializers.CharField(max_length=50, required=False, allow_blank=True, default="")
     brand = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
-    image = serializers.ImageField()
+    image = serializers.ImageField(required=False)
     found_at = serializers.DateTimeField()
     found_location = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
     attributes = serializers.DictField(child=serializers.CharField(), required=False, default=dict)
@@ -39,6 +39,11 @@ class LostItemCreateSerializer(serializers.Serializer):
     attributes = serializers.DictField(child=serializers.CharField(), required=False, default=dict)
 
 
+class ItemImageSerializer(serializers.Serializer):
+    url = serializers.CharField()
+    key = serializers.CharField()
+
+
 class ItemResponseSerializer(serializers.Serializer):
     id = serializers.CharField()
     item_type = serializers.CharField()
@@ -48,6 +53,7 @@ class ItemResponseSerializer(serializers.Serializer):
     color = serializers.CharField()
     brand = serializers.CharField()
     image_url = serializers.CharField()
+    images = ItemImageSerializer(many=True, required=False)
     status = serializers.CharField()
     embedding_status = serializers.CharField()
     venue_id = serializers.IntegerField(required=False)

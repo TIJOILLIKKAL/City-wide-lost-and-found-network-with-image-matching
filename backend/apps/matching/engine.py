@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 IMAGE_WEIGHT = 0.7
 TEXT_WEIGHT = 0.3
 MIN_SCORE_THRESHOLD = 0.3
+# Only send match notifications for matches above this confidence
+NOTIFICATION_SCORE_THRESHOLD = 0.6
 
 
 def _get_item_doc(item_id: str) -> dict | None:

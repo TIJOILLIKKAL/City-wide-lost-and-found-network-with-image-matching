@@ -86,6 +86,11 @@ export type EmbeddingStatus = "pending" | "done" | "failed" | "skipped";
 export type FoundItemStatus = "available" | "claimed" | "returned";
 export type LostItemStatus = "searching" | "found" | "closed";
 
+export interface ItemImage {
+  url: string;
+  key: string;
+}
+
 export interface FoundItem {
   id: string;
   item_type: "found";
@@ -97,6 +102,7 @@ export interface FoundItem {
   color: string;
   brand: string;
   image_url: string;
+  images: ItemImage[];
   found_at: string;
   found_location: string;
   status: FoundItemStatus;
@@ -114,6 +120,7 @@ export interface LostItem {
   color: string;
   brand: string;
   image_url: string;
+  images: ItemImage[];
   lost_at: string;
   lost_location: string;
   status: LostItemStatus;
