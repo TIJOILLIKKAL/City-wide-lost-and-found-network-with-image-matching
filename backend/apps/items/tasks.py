@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta, timezone
 from celery import shared_task
 
 from core.db.elasticsearch_client import get_es_client, ensure_items_index, ITEMS_INDEX
@@ -184,3 +185,16 @@ def _notify_user(user_id: int, notif_type: str, title: str, message: str, data: 
             logger.info("Email sent to %s for notification %s.", user.email, notif.id)
         except Exception as exc:
             logger.warning("Email failed for user %s: %s", user_id, exc)
+
+
+@shared_task
+def archive_expired_items(days: int = 90):
+    """Set found items with status='available' older than `days` days to 'archived'."""
+    from core.db.mongo import found_items_collection
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    result = found_items_collection().update_many(
+        {"status": "available", "created_at": {"$lt": cutoff}},
+        {"$set": {"status": "archived", "updated_at": datetime.now(timezone.utc)}},
+    )
+    logger.info("Archived %d expired found items (older than %d days).", result.modified_count, days)
+    return result.modified_count

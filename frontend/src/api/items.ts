@@ -31,4 +31,17 @@ export const itemsApi = {
 
   deleteLostItem: (id: string) =>
     apiClient.delete(`/items/lost/${id}/`),
+
+  bulkUploadFoundItems: (csvFile: File) => {
+    const fd = new FormData();
+    fd.append("file", csvFile);
+    return apiClient.post<{
+      created: number;
+      error_count: number;
+      total_rows: number;
+      errors: { row: number; errors: string[] }[];
+    }>("/items/found/bulk/", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((r) => r.data);
+  },
 };

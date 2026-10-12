@@ -155,6 +155,22 @@ export type ClaimStatus =
 
 export type DeliveryMethod = "pickup" | "courier";
 
+export interface ClaimStatusHistory {
+  id: number;
+  from_status: string;
+  to_status: string;
+  changed_by_email: string;
+  note: string;
+  changed_at: string;
+}
+
+export interface ClaimantReputation {
+  total: number;
+  approved: number;
+  rejected: number;
+  pct: number | null;
+}
+
 export interface Claim {
   id: number;
   found_item_id: string;
@@ -170,8 +186,66 @@ export interface Claim {
   delivery_tracking_id: string;
   reviewed_by: User | null;
   reviewed_at: string | null;
+  id_image_url: string;
+  id_verified: boolean;
+  id_verified_by: User | null;
+  history: ClaimStatusHistory[];
+  claimant_reputation: ClaimantReputation | null;
   created_at: string;
   updated_at: string;
+}
+
+// ─── Disputes ─────────────────────────────────────────────────────────────────
+
+export interface DisputeFoundItem {
+  title: string;
+  category: string;
+  image_url: string;
+}
+
+export interface Dispute {
+  found_item_id: string;
+  found_item: DisputeFoundItem;
+  claims: Claim[];
+}
+
+export interface DisputeListResponse {
+  results: Dispute[];
+  count: number;
+}
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+export interface AnalyticsOverview {
+  items: {
+    found_total: number;
+    found_new: number;
+    found_archived: number;
+    lost_total: number;
+    lost_new: number;
+  };
+  claims: {
+    total: number;
+    new: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    completed: number;
+  };
+  avg_resolution_hours: number | null;
+  match_rate_pct: number | null;
+}
+
+export interface AnalyticsDailyPoint {
+  date: string;
+  found_items: number;
+  lost_items: number;
+  claims: number;
+}
+
+export interface AnalyticsDaily {
+  days: AnalyticsDailyPoint[];
+  date_range: { start: string; end: string };
 }
 
 export interface PickupSlot {

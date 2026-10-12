@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Claim, PickupSlot, PaginatedResponse } from "@/types";
+import type { Claim, PickupSlot, PaginatedResponse, DisputeListResponse } from "@/types";
 
 export const claimsApi = {
   listClaims: (params?: Record<string, string | number>) =>
@@ -33,5 +33,27 @@ export const claimsApi = {
   listPickupSlots: (venueId: number, date?: string) =>
     apiClient
       .get<PaginatedResponse<PickupSlot>>("/claims/slots/", { params: { venue: venueId, date } })
+      .then((r) => r.data),
+
+  uploadId: (claimId: number, file: File) => {
+    const fd = new FormData();
+    fd.append("id_image", file);
+    return apiClient.post<{ id_image_url: string }>(`/claims/${claimId}/upload-id/`, fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((r) => r.data);
+  },
+
+  verifyId: (claimId: number) =>
+    apiClient.post<{ id_verified: boolean }>(`/claims/${claimId}/verify-id/`).then((r) => r.data),
+
+  listDisputes: () =>
+    apiClient.get<DisputeListResponse>("/claims/disputes/").then((r) => r.data),
+
+  resolveDispute: (foundItemId: string, winnerClaimId: number) =>
+    apiClient
+      .post<{ winner_claim_id: number; rejected_count: number }>(
+        `/claims/disputes/${foundItemId}/resolve/`,
+        { winner_claim_id: winnerClaimId },
+      )
       .then((r) => r.data),
 };

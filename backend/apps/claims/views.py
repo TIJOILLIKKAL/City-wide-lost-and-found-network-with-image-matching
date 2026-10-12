@@ -8,6 +8,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
+from rest_framework.parsers import MultiPartParser, FormParser
+
 from apps.venues.permissions import IsAdminOrVenueStaff, IsAdminUser
 from .models import Claim, PickupSlot
 from .serializers import (
@@ -15,6 +17,8 @@ from .serializers import (
     ClaimReviewSerializer, ClaimDeliverySerializer, PickupSlotSerializer,
 )
 from .services import submit_claim, review_claim, set_delivery, complete_claim, cancel_claim
+
+HIGH_VALUE_CATEGORIES = {"phone", "electronics", "jewelry", "wallet"}
 
 logger = logging.getLogger(__name__)
 
@@ -276,6 +280,108 @@ class PickupSlotListCreateView(generics.ListCreateAPIView):
 def models_capacity():
     from django.db.models import F
     return F("capacity")
+
+
+# ─── Dispute resolution ──────────────────────────────────────────────────────
+
+class DisputeListView(APIView):
+    """Admin: list found items that have 2+ competing active claims."""
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        from django.db.models import Count
+        from apps.items.services import get_found_item
+
+        disputed_ids = list(
+            Claim.objects
+            .filter(status__in=[Claim.Status.PENDING, Claim.Status.UNDER_REVIEW, Claim.Status.APPROVED])
+            .values("found_item_id")
+            .annotate(cnt=Count("id"))
+            .filter(cnt__gte=2)
+            .values_list("found_item_id", flat=True)
+        )
+
+        results = []
+        for fid in disputed_ids:
+            claims = Claim.objects.filter(
+                found_item_id=fid,
+                status__in=[Claim.Status.PENDING, Claim.Status.UNDER_REVIEW, Claim.Status.APPROVED],
+            ).select_related("claimant")
+            found_item = get_found_item(fid)
+            results.append({
+                "found_item_id": fid,
+                "found_item": {
+                    "title": found_item.get("title", "Unknown") if found_item else "Unknown",
+                    "category": found_item.get("category", "") if found_item else "",
+                    "image_url": found_item.get("image_url", "") if found_item else "",
+                },
+                "claims": ClaimListSerializer(claims, many=True).data,
+            })
+
+        return Response({"results": results, "count": len(results)})
+
+
+class DisputeResolveView(APIView):
+    """Admin: approve one claim for a disputed item, auto-reject the others."""
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, found_item_id):
+        winner_id = request.data.get("winner_claim_id")
+        if not winner_id:
+            return Response({"detail": "winner_claim_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            winner = Claim.objects.get(pk=winner_id, found_item_id=found_item_id)
+        except Claim.DoesNotExist:
+            return Response({"detail": "Claim not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        winner = review_claim(winner, "approve", request.user)
+
+        others = Claim.objects.filter(
+            found_item_id=found_item_id,
+            status__in=[Claim.Status.PENDING, Claim.Status.UNDER_REVIEW],
+        ).exclude(pk=winner_id)
+        rejected_count = others.count()
+        for claim in others:
+            review_claim(claim, "reject", request.user,
+                         rejection_reason="Another claimant was verified as the rightful owner.")
+
+        return Response({"winner_claim_id": winner.id, "rejected_count": rejected_count})
+
+
+# ─── ID verification ─────────────────────────────────────────────────────────
+
+class ClaimUploadIdView(APIView):
+    """Claimant uploads a photo of their ID for high-value item claims."""
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk):
+        claim = get_object_or_404(Claim, pk=pk, claimant=request.user)
+        id_file = request.FILES.get("id_image")
+        if not id_file:
+            return Response({"detail": "id_image file is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.items.services import upload_item_image
+        url, _ = upload_item_image(id_file, "id_docs")
+        claim.id_image_url = url
+        claim.id_verified = False
+        claim.save(update_fields=["id_image_url", "id_verified", "updated_at"])
+        return Response({"id_image_url": url})
+
+
+class ClaimVerifyIdView(APIView):
+    """Staff marks a claimant's uploaded ID as verified."""
+    permission_classes = [IsAdminOrVenueStaff]
+
+    def post(self, request, pk):
+        claim = get_object_or_404(Claim, pk=pk)
+        if request.user.is_venue_staff and claim.venue_id != request.user.venue_id:
+            raise PermissionDenied("You can only verify claims for your venue.")
+        claim.id_verified = True
+        claim.id_verified_by = request.user
+        claim.save(update_fields=["id_verified", "id_verified_by", "updated_at"])
+        return Response({"id_verified": True})
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────

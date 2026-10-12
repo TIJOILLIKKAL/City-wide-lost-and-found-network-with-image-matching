@@ -17,6 +17,8 @@ from .services import (
 )
 from .tasks import generate_embedding
 
+VALID_CATEGORIES = ["bag", "phone", "wallet", "keys", "clothing", "document", "electronics", "jewelry", "other"]
+
 logger = logging.getLogger(__name__)
 
 
@@ -236,3 +238,100 @@ class LostItemDetailView(APIView):
             return err
         delete_lost_item(item_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class BulkFoundItemUploadView(APIView):
+    """POST a CSV file to create multiple found items at once. Staff/admin only."""
+    permission_classes = [IsAdminOrVenueStaff]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        import csv
+        import io
+        from datetime import timezone as dt_tz
+        from core.db.mongo import found_items_collection as fic
+
+        csv_file = request.FILES.get("csv_file")
+        if not csv_file:
+            return Response({"detail": "csv_file is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        venue_id = request.user.venue_id or request.data.get("venue_id")
+        if not venue_id:
+            return Response({"detail": "venue_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            content = csv_file.read().decode("utf-8-sig")
+            reader = csv.DictReader(io.StringIO(content))
+        except Exception as exc:
+            return Response({"detail": f"Could not parse CSV: {exc}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.utils.dateparse import parse_datetime, parse_date
+        from datetime import datetime
+
+        created = 0
+        errors = []
+
+        for i, row in enumerate(reader, start=2):
+            row_errors = {}
+
+            title = (row.get("title") or "").strip()
+            if not title:
+                row_errors["title"] = "Required"
+
+            description = (row.get("description") or "").strip()
+            if not description:
+                row_errors["description"] = "Required"
+
+            category = (row.get("category") or "").strip().lower()
+            if category not in VALID_CATEGORIES:
+                row_errors["category"] = f"Must be one of: {', '.join(VALID_CATEGORIES)}"
+
+            found_at = None
+            raw_date = (row.get("found_at") or "").strip()
+            if raw_date:
+                try:
+                    found_at = parse_datetime(raw_date)
+                    if not found_at:
+                        d = parse_date(raw_date)
+                        if d:
+                            found_at = datetime(d.year, d.month, d.day, tzinfo=dt_tz.utc)
+                except Exception:
+                    pass
+            if not found_at:
+                row_errors["found_at"] = "Required — use YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS"
+
+            if row_errors:
+                errors.append({"row": i, "errors": row_errors})
+                continue
+
+            now = datetime.now(dt_tz.utc)
+            doc = {
+                "item_type": "found",
+                "venue_id": int(venue_id),
+                "reported_by": request.user.id,
+                "title": title,
+                "description": description,
+                "category": category,
+                "color": (row.get("color") or "").strip(),
+                "brand": (row.get("brand") or "").strip(),
+                "images": [],
+                "image_url": "",
+                "image_key": "",
+                "found_at": found_at,
+                "found_location": (row.get("found_location") or "").strip(),
+                "attributes": {},
+                "status": "available",
+                "embedding_status": "skipped",
+                "created_at": now,
+                "updated_at": now,
+            }
+            result = fic().insert_one(doc)
+            generate_embedding.delay(str(result.inserted_id), "found")
+            created += 1
+
+        return Response({
+            "created": created,
+            "error_count": len(errors),
+            "total_rows": created + len(errors),
+            "errors": errors,
+        }, status=status.HTTP_201_CREATED)

@@ -24,6 +24,9 @@ const NotificationsPage = lazy(() => import("@/pages/notifications/Notifications
 const ChatPage = lazy(() => import("@/pages/chat/ChatPage").then((m) => ({ default: m.ChatPage })));
 const ChatListPage = lazy(() => import("@/pages/chat/ChatListPage").then((m) => ({ default: m.ChatListPage })));
 const ProfilePage = lazy(() => import("@/pages/profile/ProfilePage").then((m) => ({ default: m.ProfilePage })));
+const AnalyticsPage = lazy(() => import("@/pages/analytics/AnalyticsPage").then((m) => ({ default: m.AnalyticsPage })));
+const BulkUploadPage = lazy(() => import("@/pages/items/BulkUploadPage").then((m) => ({ default: m.BulkUploadPage })));
+const DisputesPage = lazy(() => import("@/pages/admin/DisputesPage").then((m) => ({ default: m.DisputesPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +88,15 @@ export default function App() {
 
                 {/* Profile */}
                 <Route path="/profile" element={<ProfilePage />} />
+
+                {/* Analytics (admin) */}
+                <Route path="/analytics" element={<AnalyticsPage />} />
+
+                {/* Bulk upload (venue staff) */}
+                <Route path="/items/found/bulk" element={<BulkUploadPage />} />
+
+                {/* Disputes (admin) */}
+                <Route path="/admin/disputes" element={<DisputesPage />} />
               </Route>
             </Route>
 

@@ -57,8 +57,10 @@ class ClaimDetailSerializer(serializers.ModelSerializer):
     claimant = _ClaimUserSerializer(read_only=True)
     venue = _ClaimVenueSerializer(read_only=True)
     reviewed_by = _ClaimUserSerializer(read_only=True)
+    id_verified_by = _ClaimUserSerializer(read_only=True)
     pickup_slot_detail = PickupSlotSerializer(source="pickup_slot", read_only=True)
     history = ClaimStatusHistorySerializer(many=True, read_only=True)
+    claimant_reputation = serializers.SerializerMethodField()
 
     class Meta:
         model = Claim
@@ -67,14 +69,28 @@ class ClaimDetailSerializer(serializers.ModelSerializer):
             "claimant", "venue",
             "status", "proof_description", "proof_images",
             "rejection_reason", "reviewed_by", "reviewed_at",
+            "id_image_url", "id_verified", "id_verified_by",
             "delivery_method", "pickup_slot", "pickup_slot_detail",
             "delivery_address", "delivery_tracking_id",
-            "history", "created_at", "updated_at",
+            "history", "claimant_reputation", "created_at", "updated_at",
         ]
         read_only_fields = [
             "status", "reviewed_by", "reviewed_at",
             "rejection_reason", "delivery_tracking_id", "history",
+            "id_verified", "id_verified_by",
         ]
+
+    def get_claimant_reputation(self, obj):
+        qs = Claim.objects.filter(claimant=obj.claimant)
+        total = qs.count()
+        approved = qs.filter(status=Claim.Status.APPROVED).count()
+        rejected = qs.filter(status=Claim.Status.REJECTED).count()
+        return {
+            "total": total,
+            "approved": approved,
+            "rejected": rejected,
+            "pct": round(approved / total * 100) if total > 0 else None,
+        }
 
 
 class ClaimCreateSerializer(serializers.ModelSerializer):

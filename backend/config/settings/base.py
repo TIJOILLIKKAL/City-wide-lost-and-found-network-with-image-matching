@@ -39,6 +39,7 @@ LOCAL_APPS = [
     "apps.notifications",
     "apps.admin_panel",
     "apps.chat",
+    "apps.analytics",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -186,6 +187,15 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+from celery.schedules import crontab  # noqa: E402
+CELERY_BEAT_SCHEDULE = {
+    "archive-expired-found-items": {
+        "task": "apps.items.tasks.archive_expired_items",
+        "schedule": crontab(hour=2, minute=0),  # daily at 2am
+        "kwargs": {"days": 90},
+    },
+}
 
 # AWS S3
 AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")

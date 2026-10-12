@@ -92,6 +92,16 @@ class Claim(models.Model):
     delivery_address = models.TextField(blank=True)
     delivery_tracking_id = models.CharField(max_length=100, blank=True)
 
+    # ID verification for high-value items
+    id_image_url = models.CharField(max_length=500, blank=True, default="")
+    id_verified = models.BooleanField(default=False)
+    id_verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="id_verifications_made",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

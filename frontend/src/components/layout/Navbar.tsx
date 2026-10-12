@@ -1,13 +1,14 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Bell, LogOut, MapPin, Package, Search, ClipboardList, LayoutDashboard, UserCircle, MessageSquare } from "lucide-react";
+import { Bell, LogOut, MapPin, Package, Search, ClipboardList, LayoutDashboard, UserCircle, MessageSquare, BarChart3, ShieldAlert, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAuthStore, useUser, useIsVenueStaff } from "@/store/authStore";
+import { useAuthStore, useUser, useIsVenueStaff, useIsAdmin } from "@/store/authStore";
 import { useNotificationStore } from "@/store/notificationStore";
 
 export function Navbar() {
   const user = useUser();
   const isVenueStaff = useIsVenueStaff();
+  const isAdmin = useIsAdmin();
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const unreadCount = useNotificationStore((s) => s.unreadCount);
@@ -34,6 +35,15 @@ export function Navbar() {
           <NavLink to="/search" icon={<Search className="h-4 w-4" />} label="Search" />
           <NavLink to="/claims" icon={<ClipboardList className="h-4 w-4" />} label="Claims" />
           <NavLink to="/chat" icon={<MessageSquare className="h-4 w-4" />} label="Chats" />
+          {isVenueStaff && (
+            <NavLink to="/items/found/bulk" icon={<Upload className="h-4 w-4" />} label="Bulk Upload" />
+          )}
+          {isAdmin && (
+            <NavLink to="/admin/disputes" icon={<ShieldAlert className="h-4 w-4" />} label="Disputes" />
+          )}
+          {isAdmin && (
+            <NavLink to="/analytics" icon={<BarChart3 className="h-4 w-4" />} label="Analytics" />
+          )}
         </nav>
 
         <div className="flex items-center gap-2">

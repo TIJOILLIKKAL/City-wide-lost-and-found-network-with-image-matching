@@ -1,9 +1,10 @@
+import { useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, ShieldCheck, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { claimsApi } from "@/api/claims";
 import { itemsApi } from "@/api/items";
+
+const HIGH_VALUE_CATEGORIES = new Set(["phone", "electronics", "jewelry", "wallet"]);
 
 const schema = z.object({
   proof_description: z.string().min(20, "Please provide at least 20 characters describing proof of ownership."),
@@ -25,6 +28,8 @@ export function SubmitClaimPage() {
   const [params] = useSearchParams();
   const queryClient = useQueryClient();
   const foundItemId = params.get("found_item_id") ?? "";
+  const idInputRef = useRef<HTMLInputElement>(null);
+  const [idFile, setIdFile] = useState<File | null>(null);
 
   const { data: foundItem, isLoading: itemLoading } = useQuery({
     queryKey: ["found-item", foundItemId],
@@ -39,17 +44,28 @@ export function SubmitClaimPage() {
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) =>
-      claimsApi.submitClaim({
+    mutationFn: async (data: FormData) => {
+      const claim = await claimsApi.submitClaim({
         found_item_id: foundItemId,
         lost_item_id: data.lost_item_id || undefined,
         proof_description: data.proof_description,
-      }),
+      });
+      if (idFile) {
+        try {
+          await claimsApi.uploadId(claim.id, idFile);
+        } catch {
+          // Non-fatal — claim is created; ID can be uploaded later
+        }
+      }
+      return claim;
+    },
     onSuccess: (claim) => {
       queryClient.invalidateQueries({ queryKey: ["claims"] });
       navigate(`/claims/${claim.id}`);
     },
   });
+
+  const isHighValue = foundItem && HIGH_VALUE_CATEGORIES.has(foundItem.category);
 
   if (!foundItemId) {
     return (
@@ -124,6 +140,42 @@ export function SubmitClaimPage() {
               <Input
                 placeholder="Lost item ID from My Lost Items"
                 {...register("lost_item_id")}
+              />
+            </div>
+
+            {/* ID upload — required for high-value, optional otherwise */}
+            <div className={`space-y-2 rounded-lg border p-4 ${isHighValue ? "border-yellow-500/40 bg-yellow-50/30 dark:bg-yellow-950/20" : "border-muted"}`}>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className={`h-4 w-4 ${isHighValue ? "text-yellow-500" : "text-muted-foreground"}`} />
+                <Label className="cursor-default">
+                  ID Verification{" "}
+                  <span className="text-muted-foreground font-normal">
+                    {isHighValue ? "(required for this category)" : "(optional)"}
+                  </span>
+                </Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                A photo of a government-issued ID helps venue staff verify your identity faster.
+              </p>
+              {idFile ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-green-600 flex-1 truncate">{idFile.name}</span>
+                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIdFile(null)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => idInputRef.current?.click()}>
+                  <Upload className="h-3.5 w-3.5" />
+                  Choose ID photo
+                </Button>
+              )}
+              <input
+                ref={idInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) setIdFile(f); }}
               />
             </div>
 

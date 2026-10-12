@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, CheckCircle, XCircle, Truck, Package, MessageSquare } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle, XCircle, Truck, Package, MessageSquare, ShieldCheck, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -98,6 +98,26 @@ export function ClaimDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Claimant reputation (staff only) */}
+      {isStaff && claim.claimant_reputation && (
+        <ReputationPanel rep={claim.claimant_reputation} />
+      )}
+
+      {/* ID verification */}
+      {!isStaff && !claim.id_image_url && (
+        <UploadIdPanel claimId={claim.id} onDone={invalidate} />
+      )}
+      {claim.id_image_url && (
+        <IdStatusPanel
+          imageUrl={claim.id_image_url}
+          verified={claim.id_verified}
+          verifiedBy={claim.id_verified_by?.full_name}
+          claimId={claim.id}
+          isStaff={isStaff}
+          onDone={invalidate}
+        />
+      )}
+
       {/* Action panels — shown based on role + status */}
       {isStaff && ["pending", "under_review"].includes(claim.status) && (
         <ReviewPanel claimId={claim.id} onDone={invalidate} />
@@ -115,6 +135,145 @@ export function ClaimDetailPage() {
         <CancelPanel claimId={claim.id} onDone={() => { invalidate(); navigate("/claims"); }} />
       )}
     </div>
+  );
+}
+
+// ─── Reputation panel ─────────────────────────────────────────────────────────
+
+function ReputationPanel({ rep }: { rep: { total: number; approved: number; rejected: number; pct: number | null } }) {
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base">Claimant Reputation</CardTitle></CardHeader>
+      <CardContent>
+        <div className="flex gap-6 text-sm">
+          <div className="text-center">
+            <p className="text-2xl font-bold">{rep.total}</p>
+            <p className="text-muted-foreground text-xs">Total claims</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-green-600">{rep.approved}</p>
+            <p className="text-muted-foreground text-xs">Approved</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-destructive">{rep.rejected}</p>
+            <p className="text-muted-foreground text-xs">Rejected</p>
+          </div>
+          {rep.pct != null && (
+            <div className="text-center">
+              <p className="text-2xl font-bold">{rep.pct}%</p>
+              <p className="text-muted-foreground text-xs">Success rate</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Owner: upload ID ─────────────────────────────────────────────────────────
+
+function UploadIdPanel({ claimId, onDone }: { claimId: number; onDone: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const mutation = useMutation({
+    mutationFn: (file: File) => claimsApi.uploadId(claimId, file),
+    onSuccess: onDone,
+  });
+
+  return (
+    <Card className="border-yellow-500/30">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-yellow-500" />
+          ID Verification <span className="text-muted-foreground font-normal text-sm">(optional but speeds up approval)</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Upload a photo of a government-issued ID to help verify your identity. This is required for high-value items.
+        </p>
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => inputRef.current?.click()}
+          disabled={mutation.isPending}
+        >
+          {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          Upload ID Photo
+        </Button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) mutation.mutate(f);
+          }}
+        />
+        {mutation.isError && (
+          <p className="text-xs text-destructive">Upload failed. Please try again.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── ID status panel ──────────────────────────────────────────────────────────
+
+function IdStatusPanel({
+  imageUrl,
+  verified,
+  verifiedBy,
+  claimId,
+  isStaff,
+  onDone,
+}: {
+  imageUrl: string;
+  verified: boolean;
+  verifiedBy?: string;
+  claimId: number;
+  isStaff: boolean;
+  onDone: () => void;
+}) {
+  const mutation = useMutation({
+    mutationFn: () => claimsApi.verifyId(claimId),
+    onSuccess: onDone,
+  });
+
+  return (
+    <Card className={verified ? "border-green-500/30" : "border-yellow-500/30"}>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <ShieldCheck className={`h-4 w-4 ${verified ? "text-green-500" : "text-yellow-500"}`} />
+          ID Document
+          {verified ? (
+            <Badge variant="success" className="ml-1">Verified</Badge>
+          ) : (
+            <Badge variant="warning" className="ml-1">Pending verification</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <a href={imageUrl} target="_blank" rel="noreferrer">
+          <img src={imageUrl} alt="ID document" className="max-h-40 rounded border object-contain" />
+        </a>
+        {verified && verifiedBy && (
+          <p className="text-xs text-muted-foreground">Verified by {verifiedBy}</p>
+        )}
+        {isStaff && !verified && (
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+            <CheckCircle className="h-3 w-3" />
+            Mark as Verified
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
