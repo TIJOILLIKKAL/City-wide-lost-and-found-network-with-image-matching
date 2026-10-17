@@ -115,7 +115,6 @@ function NotificationCard({
 
 function renderNotification(n: ApiNotification): { icon: React.ReactNode; to: string } {
   const lostId = (n.data.lost_item_id as string) || "";
-  const foundId = (n.data.found_item_id as string) || "";
 
   switch (n.type) {
     case "match_found":

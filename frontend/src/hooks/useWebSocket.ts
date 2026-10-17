@@ -29,10 +29,11 @@ export function useWebSocket() {
 
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data) as WsEvent & {
+          type RawMsg = {
             type: string; room_id?: number; claim_id?: number;
             sender_id?: number; sender_name?: string; text?: string; created_at?: string;
           };
+          const data = JSON.parse(event.data) as RawMsg;
 
           if (data.type === "chat_message" && data.room_id) {
             // Route to chat unread store; don't pollute the notification bell
