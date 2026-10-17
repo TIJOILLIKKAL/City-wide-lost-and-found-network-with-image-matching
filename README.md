@@ -63,12 +63,29 @@ City-wide-lost-and-found-network-with-image-matching/
 │   │   ├── claims/                 # Claim lifecycle management
 │   │   │   ├── models.py           # Claim, PickupSlot, ClaimStatusHistory
 │   │   │   ├── views.py            # List/Create/Detail + Review/Delivery/Complete/Cancel
+│   │   │   │                       # + ID verification (upload-id/verify-id)
+│   │   │   │                       # + Dispute resolution
 │   │   │   ├── serializers.py
 │   │   │   └── services.py         # Business logic: submit, review, complete, cancel
 │   │   │
-│   │   ├── notifications/          # WebSocket push notifications
-│   │   │   ├── consumers.py        # Django Channels WebSocket consumer
+│   │   ├── notifications/          # In-app notifications + WebSocket push
+│   │   │   ├── models.py           # Notification model (PostgreSQL)
+│   │   │   ├── views.py            # NotificationListView, NotificationMarkReadView
+│   │   │   ├── consumers.py        # Django Channels WS consumer (/ws/notifications/)
+│   │   │   ├── urls.py
 │   │   │   └── routing.py
+│   │   │
+│   │   ├── chat/                   # Per-claim live chat
+│   │   │   ├── models.py           # ChatRoom, ChatMessage
+│   │   │   ├── views.py            # ChatRoomsListView, ChatRoomView, ChatHistoryView, ChatPresenceView
+│   │   │   ├── serializers.py
+│   │   │   ├── consumers.py        # Django Channels WS consumer (/ws/chat/<room_id>/)
+│   │   │   ├── urls.py
+│   │   │   └── routing.py
+│   │   │
+│   │   ├── analytics/              # Admin analytics dashboard
+│   │   │   ├── views.py            # AnalyticsOverviewView, AnalyticsDailyView
+│   │   │   └── urls.py
 │   │   │
 │   │   └── admin_panel/            # Dedicated admin REST API (all /api/v1/admin/)
 │   │       ├── views.py            # Stats, Users, Venues, Items, Claims
@@ -156,6 +173,7 @@ City-wide-lost-and-found-network-with-image-matching/
 └────────────┼────────────────────────────────────┼──────────────────────┘
              │  HTTP /api/v1/*                     │  HTTP /api/v1/admin/*
              │  WS  /ws/notifications/             │
+             │  WS  /ws/chat/<room_id>/            │
              ▼                                     ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                         DJANGO BACKEND  :8000                           │
@@ -163,13 +181,16 @@ City-wide-lost-and-found-network-with-image-matching/
 │   ┌─────────────────────────────────────────────────────────────────┐  │
 │   │  Django Channels (ASGI) + Daphne                                │  │
 │   │  ┌──────────────────────┐    ┌──────────────────────────────┐  │  │
-│   │  │  REST API (DRF)      │    │  WebSocket Consumer          │  │  │
+│   │  │  REST API (DRF)      │    │  WebSocket Consumers         │  │  │
 │   │  │  /api/v1/            │    │  /ws/notifications/          │  │  │
-│   │  │  - auth              │    │  Pushes claim events,        │  │  │
-│   │  │  - venues            │    │  match notifications         │  │  │
-│   │  │  - items             │    │  to user/venue groups        │  │  │
-│   │  │  - matching          │    └──────────────────────────────┘  │  │
-│   │  │  - claims            │                                       │  │
+│   │  │  - auth              │    │  /ws/chat/<room_id>/         │  │  │
+│   │  │  - venues            │    │  Push: claim events,         │  │  │
+│   │  │  - items             │    │  match alerts, chat msgs,    │  │  │
+│   │  │  - matching          │    │  presence updates            │  │  │
+│   │  │  - claims            │    └──────────────────────────────┘  │  │
+│   │  │  - notifications     │                                       │  │
+│   │  │  - chat              │                                       │  │
+│   │  │  - analytics         │                                       │  │
 │   │  │  - admin_panel       │    ┌──────────────────────────────┐  │  │
 │   │  └──────────────────────┘    │  Celery Worker               │  │  │
 │   │                              │  - generate_embedding task   │  │  │
@@ -510,19 +531,24 @@ Any non-terminal status ──► CANCELLED
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | GET | `/found/` | JWT | List found items (filter: venue_id, category, status) |
-| POST | `/found/` | Staff/Admin | Upload found item + image |
+| POST | `/found/` | Staff/Admin | Upload found item + one or more images (`images` key) |
+| POST | `/found/bulk/` | Staff/Admin | Bulk-create found items from CSV file |
 | GET | `/found/{id}/` | JWT | Found item detail |
-| GET | `/lost/` | JWT | List lost items |
+| GET | `/lost/` | JWT | List lost items (owners see own; admin sees all) |
 | POST | `/lost/` | JWT | Report lost item |
 | GET | `/lost/{id}/` | JWT | Lost item detail |
+| PATCH | `/lost/{id}/` | Owner/Admin | Update lost item fields / images |
+| DELETE | `/lost/{id}/` | Owner/Admin | Delete lost item |
+
+**Bulk CSV columns:** `title` (req), `description` (req), `category` (req), `found_at` (req), `color`, `brand`, `found_location`
 
 ### AI Matching  `/api/v1/matching/`
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| GET | `/matches/{type}/{id}/` | JWT | Get top-k matches for an item |
-| POST | `/search/image/` | JWT | Search by uploaded image |
-| POST | `/search/text/` | JWT | Search by text description |
+| GET | `/{type}/{id}/matches/` | JWT | Get top-k cached matches for a found or lost item |
+| POST | `/search/image/` | JWT | Search by uploaded image (CLIP, rate limited 30/min) |
+| POST | `/search/text/` | JWT | Search by text description (CLIP, rate limited 30/min) |
 
 ### Claims  `/api/v1/claims/`
 
@@ -531,12 +557,43 @@ Any non-terminal status ──► CANCELLED
 | GET | `/` | JWT | List claims (role-scoped) |
 | POST | `/` | JWT | Submit claim for a found item |
 | GET | `/{id}/` | JWT | Claim detail |
-| POST | `/{id}/review/` | Staff/Admin | Approve or reject |
-| POST | `/{id}/delivery/` | Claimant | Choose pickup or courier |
-| POST | `/{id}/complete/` | Staff/Admin | Mark as completed |
-| POST | `/{id}/cancel/` | JWT | Cancel claim |
+| POST | `/{id}/review/` | Staff/Admin | Approve or reject (`action`, `rejection_reason`) |
+| POST | `/{id}/delivery/` | Claimant | Choose pickup slot or courier address |
+| POST | `/{id}/complete/` | Staff/Admin | Mark as completed (optional `delivery_tracking_id`) |
+| POST | `/{id}/cancel/` | Claimant | Cancel claim |
+| POST | `/{id}/upload-id/` | Claimant | Upload govt ID photo for high-value items |
+| POST | `/{id}/verify-id/` | Staff/Admin | Mark uploaded ID as verified |
+| GET | `/disputes/` | Admin | List found items with 2+ competing active claims |
+| POST | `/disputes/{found_item_id}/resolve/` | Admin | Approve winner, auto-reject others |
 | GET | `/slots/` | JWT | List pickup slots |
 | POST | `/slots/` | Staff/Admin | Create pickup slot |
+
+**High-value categories triggering ID verification:** phone, electronics, jewelry, wallet
+
+### Notifications  `/api/v1/notifications/`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/` | JWT | List last 50 notifications + unread count |
+| POST | `/mark-read/` | JWT | Mark all (or specific IDs) as read |
+
+**Notification types:** `match_found` · `claim_update` · `new_claim` (staff) · `system`
+
+### Chat  `/api/v1/chat/`
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/rooms/` | JWT | List all accessible chat rooms |
+| GET/POST | `/claim/{claim_id}/` | JWT | Get or auto-create chat room for a claim |
+| GET | `/room/{room_id}/messages/` | JWT | Message history (50 per page, `?before=<id>`) |
+| GET | `/room/{room_id}/presence/` | JWT | List online user IDs for the room |
+
+### Analytics  `/api/v1/analytics/`  *(Admin only)*
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/overview/?days=30` | Aggregate counts: items, claims, avg resolution time, match rate |
+| GET | `/daily/?days=30` | Per-day breakdown for found items, lost items, and claims |
 
 ### Admin Panel  `/api/v1/admin/`  *(Admin role required for all)*
 
@@ -562,14 +619,30 @@ Any non-terminal status ──► CANCELLED
 
 ### WebSocket
 
+**Notifications** — real-time events
 ```
-ws://localhost:8000/ws/notifications/
-Authorization: Bearer <access_token>   (sent as query param or on connect)
+ws://localhost:8000/ws/notifications/?token=<access_token>
 
 Events pushed by server:
-  { "type": "new_claim",     "claim_id": 42, "found_item_id": "..." }
-  { "type": "claim_update",  "claim_id": 42, "status": "approved" }
-  { "type": "match_found",   "lost_item_id": "...", "matches": [...] }
+  { "type": "match",        "item_id": "...", "item_type": "lost", "match_count": 3 }
+  { "type": "claim_status", "claim_id": 42,   "status": "approved" }
+  { "type": "new_claim",    "claim_id": 42,   "venue_id": 7 }
+
+Close code 4001 = invalid token (client should not reconnect)
+```
+
+**Chat** — per-claim messaging
+```
+ws://localhost:8000/ws/chat/<room_id>/?token=<access_token>
+
+Send:    { "type": "chat_message", "text": "Hello!" }
+
+Receive: { "type": "chat_message", "room_id": 1, "claim_id": 42,
+           "sender_id": 5, "sender_name": "Jane", "text": "Hello!",
+           "created_at": "2026-10-17T10:00:00Z" }
+         { "type": "presence", "user_id": 5, "online": true }
+
+Close code 4001 = invalid token
 ```
 
 ---
@@ -783,12 +856,14 @@ To create a **Venue Staff** account, register a new user via the API/user app, t
 
 ---
 
-## 13. Real-time Notifications
+## 13. Real-time (WebSocket)
 
-Django Channels + Redis channel layer powers WebSocket push.
+Django Channels + Redis channel layer powers two WebSocket endpoints.
+
+### Notification WS  `ws://localhost:8000/ws/notifications/`
 
 ```
-User connects → ws://localhost:8000/ws/notifications/
+User connects → ws://localhost:8000/ws/notifications/?token=<jwt>
                   │
                   ▼
           NotificationConsumer.connect()
@@ -796,13 +871,36 @@ User connects → ws://localhost:8000/ws/notifications/
           • Added to personal group:  "user_<id>"
           • If venue staff: also added to "venue_<id>"
 
-Server sends → channel_layer.group_send("venue_42", {...})
+Server pushes → channel_layer.group_send("venue_42", {...})
                   │
                   ▼
           All staff connected to that venue receive the event
 ```
 
-Events include: new claim submitted, claim status updated, AI match found.
+Events: new claim submitted · claim status updated · AI match found
+
+### Chat WS  `ws://localhost:8000/ws/chat/<room_id>/`
+
+```
+User connects → ws://localhost:8000/ws/chat/5/?token=<jwt>
+                  │
+                  ▼
+          ChatConsumer.connect()
+          • JWT token validated
+          • Access checked (claimant / venue staff / admin)
+          • User ID added to Redis presence set  "chat_online:<room_id>"
+          • Joined channel group  "chat_5"
+
+Send text message:
+  { "type": "chat_message", "text": "Is the wallet still there?" }
+
+Receive from server:
+  { "type": "chat_message", "room_id": 5, "claim_id": 42,
+    "sender_id": 7, "sender_name": "Alice", "text": "...", "created_at": "..." }
+  { "type": "presence", "user_id": 7, "online": true }
+
+On disconnect → user removed from presence set, peers notified
+```
 
 ---
 
@@ -837,8 +935,9 @@ File: `LostAndFound.postman_collection.json` (project root)
 | `lostItemId` | Report Lost Item request |
 | `claimId` | Submit Claim request |
 | `slotId` | Create Pickup Slot request |
+| `roomId` | Get / Create Chat Room request |
 
-**Folders:** Authentication (6) · Venues (10) · Found Items (3) · Lost Items (3) · AI Matching (4) · Claims (11) · System (3) · WebSocket info (1)
+**Folders:** Authentication (6) · Venues (10) · Found Items (4) · Lost Items (5) · AI Matching (4) · Claims (13) · Notifications (2) · Chat (4) · Analytics (2) · System (3) · WebSocket info (2)
 
 ---
 

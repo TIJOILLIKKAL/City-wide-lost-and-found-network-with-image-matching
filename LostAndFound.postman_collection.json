@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "9d2856af-3e7b-42e4-800c-02ceb1ba27e5",
     "name": "Lost and Found City Network API",
-    "description": "Backend API for the City-wide Lost and Found Network.\n\nQuick Start:\n1. Run: docker-compose up -d\n2. Register or Login - tokens are saved automatically as collection variables.\n3. All other requests use Bearer auth via the accessToken variable.\n\nSwagger UI: {{baseUrl}}/api/docs/  (DEBUG mode only)\nOpenAPI Schema: {{baseUrl}}/api/schema/",
+    "description": "Backend API for the City-wide Lost and Found Network.\n\nQuick Start:\n1. Run: docker-compose up -d\n2. Register or Login — tokens are saved automatically as collection variables.\n3. All other requests use Bearer auth via the accessToken variable.\n\nSwagger UI: {{baseUrl}}/api/docs/  (DEBUG mode only)\nOpenAPI Schema: {{baseUrl}}/api/schema/\n\nWebSocket endpoints:\n  Notifications: ws://localhost:8000/ws/notifications/?token={{accessToken}}\n  Chat room:     ws://localhost:8000/ws/chat/{{roomId}}/?token={{accessToken}}",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -55,6 +55,11 @@
       "key": "slotId",
       "value": "1",
       "type": "string"
+    },
+    {
+      "key": "roomId",
+      "value": "1",
+      "type": "string"
     }
   ],
   "item": [
@@ -75,16 +80,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/register/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "register",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register", ""]
             },
             "description": "Create a new user account. Returns user + JWT token pair. Rate limited 10/min.\n\nResponse 201: `{ user: {...}, tokens: { access, refresh } }`",
             "auth": {
@@ -93,11 +90,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"StrongPass123!\",\n  \"password2\": \"StrongPass123!\",\n  \"full_name\": \"John Owner\",\n  \"phone\": \"+919876543210\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           },
           "event": [
@@ -130,29 +123,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/login/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "login",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login", ""]
             },
-            "description": "Authenticate and get JWT tokens. Returns access, refresh, and user info.\n\nResponse 200: `{ access, refresh, user: { id, email, role } }`",
+            "description": "Authenticate and get JWT tokens.\n\nResponse 200: `{ access, refresh, user: { id, email, role } }`",
             "auth": {
               "type": "noauth"
             },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"owner@example.com\",\n  \"password\": \"StrongPass123!\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           },
           "event": [
@@ -185,26 +166,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/logout/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "logout",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "logout", ""]
             },
             "description": "Blacklist the refresh token, ending the session.\n\nResponse 200: `{ detail: 'Logged out successfully.' }`",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh\": \"{{refreshToken}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           }
         },
@@ -221,17 +190,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/token/refresh/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "token",
-                "refresh",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "token", "refresh", ""]
             },
             "description": "Obtain a new access token using a valid refresh token.\n\nResponse 200: `{ access: 'eyJ...' }`",
             "auth": {
@@ -240,11 +200,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh\": \"{{refreshToken}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           },
           "event": [
@@ -271,16 +227,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/me/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "me",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me", ""]
             },
             "description": "Returns the current user's profile.\n\nResponse 200: `{ id, email, full_name, phone, role, is_verified, created_at }`"
           }
@@ -298,26 +246,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/me/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "me",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me", ""]
             },
-            "description": "Partial update of the current user. full_name and phone are writable; role and email are read-only.",
+            "description": "Partial update of the current user. `full_name` and `phone` are writable; `role` and `email` are read-only.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"full_name\": \"John Updated\",\n  \"phone\": \"+919876543211\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           }
         }
@@ -335,40 +271,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/venues/?search=&status=active&ordering=name",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "venues",
-                ""
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "venues", ""],
               "query": [
-                {
-                  "key": "search",
-                  "value": "",
-                  "description": "",
-                  "disabled": false
-                },
-                {
-                  "key": "venue_type",
-                  "value": "",
-                  "description": "airport|hotel|mall|restaurant|transport|government|other",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "active",
-                  "description": "",
-                  "disabled": false
-                },
-                {
-                  "key": "ordering",
-                  "value": "name",
-                  "description": "",
-                  "disabled": false
-                }
+                { "key": "search", "value": "", "disabled": false },
+                { "key": "venue_type", "value": "", "description": "airport|hotel|mall|restaurant|transport|government|other", "disabled": true },
+                { "key": "status", "value": "active", "disabled": false },
+                { "key": "ordering", "value": "name", "disabled": false }
               ]
             },
             "description": "Paginated list of venues. Requires authentication (staff or admin)."
@@ -380,32 +289,18 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/venues/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "venues",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "venues", ""]
             },
             "description": "Create a venue. Admin only.\n\nvenue_type choices: airport | hotel | mall | restaurant | transport | government | other",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"IGI Airport Terminal 1\",\n  \"slug\": \"igi-t1\",\n  \"venue_type\": \"airport\",\n  \"address\": \"Terminal 1, IGI Airport\",\n  \"city\": \"New Delhi\",\n  \"state\": \"Delhi\",\n  \"country\": \"IN\",\n  \"contact_name\": \"Lost & Found Desk\",\n  \"contact_email\": \"lostfound@igi.in\",\n  \"contact_phone\": \"+911234567890\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           }
         },
@@ -417,16 +312,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/venues/types/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "venues",
-                "types",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "venues", "types", ""]
             },
             "description": "Returns all venue type choices.\n\nResponse 200: `[{ value, label }]`"
           }
@@ -439,16 +326,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/venues/{{venueSlug}}/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "venues",
-                "{{venueSlug}}",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "venues", "{{venueSlug}}", ""]
             },
             "description": "Retrieve a venue by its URL slug. Includes operating hours."
           }
@@ -459,33 +338,18 @@
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/venues/{{venueSlug}}/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "venues",
-                "{{venueSlug}}",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "venues", "{{venueSlug}}", ""]
             },
             "description": "Partial update. Admin only.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"contact_name\": \"New Manager\",\n  \"contact_phone\": \"+911234567891\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           }
         },
@@ -497,16 +361,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/venues/{{venueSlug}}/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "venues",
-                "{{venueSlug}}",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "venues", "{{venueSlug}}", ""]
             },
             "description": "Permanently delete a venue. Admin only. Response 204."
           }
@@ -519,17 +375,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/venues/{{venueSlug}}/hours/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "venues",
-                "{{venueSlug}}",
-                "hours",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "venues", "{{venueSlug}}", "hours", ""]
             },
             "description": "Get operating hours for a venue.\n\nResponse: `[{ day_of_week (0=Mon..6=Sun), opens_at, closes_at, is_closed }]`"
           }
@@ -540,34 +387,18 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/venues/{{venueSlug}}/hours/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "venues",
-                "{{venueSlug}}",
-                "hours",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "venues", "{{venueSlug}}", "hours", ""]
             },
             "description": "Replace all operating hours for a venue. Provide all 7 days. Admin/staff only.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"hours\": [\n    {\n      \"day_of_week\": 0,\n      \"opens_at\": \"08:00\",\n      \"closes_at\": \"20:00\",\n      \"is_closed\": false\n    },\n    {\n      \"day_of_week\": 1,\n      \"opens_at\": \"08:00\",\n      \"closes_at\": \"20:00\",\n      \"is_closed\": false\n    },\n    {\n      \"day_of_week\": 2,\n      \"opens_at\": \"08:00\",\n      \"closes_at\": \"20:00\",\n      \"is_closed\": false\n    },\n    {\n      \"day_of_week\": 3,\n      \"opens_at\": \"08:00\",\n      \"closes_at\": \"20:00\",\n      \"is_closed\": false\n    },\n    {\n      \"day_of_week\": 4,\n      \"opens_at\": \"08:00\",\n      \"closes_at\": \"20:00\",\n      \"is_closed\": false\n    },\n    {\n      \"day_of_week\": 5,\n      \"opens_at\": \"09:00\",\n      \"closes_at\": \"18:00\",\n      \"is_closed\": false\n    },\n    {\n      \"day_of_week\": 6,\n      \"opens_at\": \"00:00\",\n      \"closes_at\": \"00:00\",\n      \"is_closed\": true\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"hours\": [\n    { \"day_of_week\": 0, \"opens_at\": \"08:00\", \"closes_at\": \"20:00\", \"is_closed\": false },\n    { \"day_of_week\": 1, \"opens_at\": \"08:00\", \"closes_at\": \"20:00\", \"is_closed\": false },\n    { \"day_of_week\": 2, \"opens_at\": \"08:00\", \"closes_at\": \"20:00\", \"is_closed\": false },\n    { \"day_of_week\": 3, \"opens_at\": \"08:00\", \"closes_at\": \"20:00\", \"is_closed\": false },\n    { \"day_of_week\": 4, \"opens_at\": \"08:00\", \"closes_at\": \"20:00\", \"is_closed\": false },\n    { \"day_of_week\": 5, \"opens_at\": \"09:00\", \"closes_at\": \"18:00\", \"is_closed\": false },\n    { \"day_of_week\": 6, \"opens_at\": \"00:00\", \"closes_at\": \"00:00\", \"is_closed\": true }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
             }
           }
         },
@@ -579,17 +410,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/venues/{{venueSlug}}/activate/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "venues",
-                "{{venueSlug}}",
-                "activate",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "venues", "{{venueSlug}}", "activate", ""]
             },
             "description": "Set venue status to active. Admin only.\n\nResponse 200: `{ detail: 'Venue activated.' }`"
           }
@@ -602,17 +424,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/venues/{{venueSlug}}/deactivate/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "venues",
-                "{{venueSlug}}",
-                "deactivate",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "venues", "{{venueSlug}}", "deactivate", ""]
             },
             "description": "Set venue status to inactive. Admin only.\n\nResponse 200: `{ detail: 'Venue deactivated.' }`"
           }
@@ -631,47 +444,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/items/found/?page=1&limit=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "items",
-                "found",
-                ""
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "items", "found", ""],
               "query": [
-                {
-                  "key": "page",
-                  "value": "1",
-                  "description": "",
-                  "disabled": false
-                },
-                {
-                  "key": "limit",
-                  "value": "20",
-                  "description": "",
-                  "disabled": false
-                },
-                {
-                  "key": "category",
-                  "value": "",
-                  "description": "bag|phone|wallet|keys|clothing|document|electronics|jewelry|other",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "description": "available|claimed|archived",
-                  "disabled": true
-                },
-                {
-                  "key": "venue_id",
-                  "value": "",
-                  "description": "Filter by venue ID",
-                  "disabled": true
-                }
+                { "key": "page", "value": "1", "disabled": false },
+                { "key": "limit", "value": "20", "disabled": false },
+                { "key": "category", "value": "", "description": "bag|phone|wallet|keys|clothing|document|electronics|jewelry|other", "disabled": true },
+                { "key": "status", "value": "", "description": "available|claimed|archived", "disabled": true },
+                { "key": "venue_id", "value": "", "description": "Filter by venue ID", "disabled": true }
               ]
             },
             "description": "Paginated list of found items stored at venues. Any authenticated user can list.\n\nResponse 200: `{ results: [...], page: 1 }`"
@@ -701,70 +481,22 @@
             "body": {
               "mode": "formdata",
               "formdata": [
-                {
-                  "key": "title",
-                  "value": "Black Leather Wallet",
-                  "type": "text",
-                  "description": "Required"
-                },
-                {
-                  "key": "description",
-                  "value": "Found near Gate 5. Contains some cards, no cash.",
-                  "type": "text",
-                  "description": "Required"
-                },
-                {
-                  "key": "category",
-                  "value": "wallet",
-                  "type": "text",
-                  "description": "Required - bag|phone|wallet|keys|clothing|document|electronics|jewelry|other"
-                },
-                {
-                  "key": "color",
-                  "value": "black",
-                  "type": "text",
-                  "description": "Optional"
-                },
-                {
-                  "key": "brand",
-                  "value": "Fossil",
-                  "type": "text",
-                  "description": "Optional"
-                },
-                {
-                  "key": "found_at",
-                  "value": "2026-10-04T09:30:00Z",
-                  "type": "text",
-                  "description": "Required - ISO 8601"
-                },
-                {
-                  "key": "found_location",
-                  "value": "Gate 5 seating area, Terminal 2",
-                  "type": "text",
-                  "description": "Optional"
-                },
-                {
-                  "key": "image",
-                  "type": "file",
-                  "src": null,
-                  "description": "Required - item photo"
-                }
+                { "key": "title", "value": "Black Leather Wallet", "type": "text", "description": "Required" },
+                { "key": "description", "value": "Found near Gate 5. Contains some cards, no cash.", "type": "text", "description": "Required" },
+                { "key": "category", "value": "wallet", "type": "text", "description": "Required - bag|phone|wallet|keys|clothing|document|electronics|jewelry|other" },
+                { "key": "color", "value": "black", "type": "text", "description": "Optional" },
+                { "key": "brand", "value": "Fossil", "type": "text", "description": "Optional" },
+                { "key": "found_at", "value": "2026-10-04T09:30:00Z", "type": "text", "description": "Required - ISO 8601" },
+                { "key": "found_location", "value": "Gate 5 seating area, Terminal 2", "type": "text", "description": "Optional" },
+                { "key": "images", "type": "file", "src": null, "description": "Required - one or more item photos (repeat key for multiple)" }
               ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/items/found/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "items",
-                "found",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "items", "found", ""]
             },
-            "description": "Upload a found item with photo. Venue staff or admin only. Triggers async CLIP embedding via Celery. foundItemId is auto-saved on success.\n\nResponse 201: Full MongoDB item document with `id` field."
+            "description": "Upload a found item with one or more photos. Venue staff or admin only. Triggers async CLIP embedding via Celery. foundItemId is auto-saved on success.\n\nUse the `images` key (repeat for multiple files) or the legacy single `image` key.\n\nResponse 201: Full MongoDB item document with `id` field."
           }
         },
         {
@@ -775,19 +507,41 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/items/found/{{foundItemId}}/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "items",
-                "found",
-                "{{foundItemId}}",
-                ""
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "items", "found", "{{foundItemId}}", ""]
+            },
+            "description": "Retrieve a single found item by its MongoDB ObjectId (stored in {{foundItemId}}).\n\nResponse 200: `{ id, title, category, status, images, image_url, venue_id, embedding_status }`"
+          }
+        },
+        {
+          "_postman_id": "c1a2b3c4-d5e6-7890-abcd-ef1234567890",
+          "name": "Bulk Upload Found Items (CSV)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "csv_file",
+                  "type": "file",
+                  "src": null,
+                  "description": "Required - CSV file. Required columns: title, description, category, found_at. Optional: color, brand, found_location."
+                },
+                {
+                  "key": "venue_id",
+                  "value": "1",
+                  "type": "text",
+                  "description": "Required for admins. Staff default to their assigned venue."
+                }
               ]
             },
-            "description": "Retrieve a single found item by its MongoDB ObjectId (stored in {{foundItemId}}).\n\nResponse 200: `{ id, title, category, status, image_url, venue_id, embedding_status }`"
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/items/found/bulk/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "items", "found", "bulk", ""]
+            },
+            "description": "Bulk-create found items from a CSV file. **Venue staff or admin only.** Images are not supported in bulk mode — embedding_status will be `skipped`.\n\nCSV columns:\n- `title` (required)\n- `description` (required)\n- `category` (required) — bag|phone|wallet|keys|clothing|document|electronics|jewelry|other\n- `found_at` (required) — YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS\n- `color` (optional)\n- `brand` (optional)\n- `found_location` (optional)\n\nResponse 201: `{ created, error_count, total_rows, errors: [{ row, errors }] }`"
           }
         }
       ]
@@ -804,41 +558,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/items/lost/?page=1&limit=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "items",
-                "lost",
-                ""
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "items", "lost", ""],
               "query": [
-                {
-                  "key": "page",
-                  "value": "1",
-                  "description": "",
-                  "disabled": false
-                },
-                {
-                  "key": "limit",
-                  "value": "20",
-                  "description": "",
-                  "disabled": false
-                },
-                {
-                  "key": "category",
-                  "value": "",
-                  "description": "bag|phone|wallet|keys|clothing|document|electronics|jewelry|other",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "description": "searching|matched|claimed|closed",
-                  "disabled": true
-                }
+                { "key": "page", "value": "1", "disabled": false },
+                { "key": "limit", "value": "20", "disabled": false },
+                { "key": "category", "value": "", "description": "bag|phone|wallet|keys|clothing|document|electronics|jewelry|other", "disabled": true },
+                { "key": "status", "value": "", "description": "searching|matched|claimed|closed", "disabled": true }
               ]
             },
             "description": "List the current user's lost items. Admin sees all.\n\nResponse 200: `{ results: [...], page: 1 }`"
@@ -868,70 +594,22 @@
             "body": {
               "mode": "formdata",
               "formdata": [
-                {
-                  "key": "title",
-                  "value": "My Black Leather Wallet",
-                  "type": "text",
-                  "description": "Required"
-                },
-                {
-                  "key": "description",
-                  "value": "Lost my wallet at the airport. Contains driving license, 2 credit cards, and a family photo.",
-                  "type": "text",
-                  "description": "Required"
-                },
-                {
-                  "key": "category",
-                  "value": "wallet",
-                  "type": "text",
-                  "description": "Required - bag|phone|wallet|keys|clothing|document|electronics|jewelry|other"
-                },
-                {
-                  "key": "color",
-                  "value": "black",
-                  "type": "text",
-                  "description": "Optional"
-                },
-                {
-                  "key": "brand",
-                  "value": "Fossil",
-                  "type": "text",
-                  "description": "Optional"
-                },
-                {
-                  "key": "lost_at",
-                  "value": "2026-10-03T14:00:00Z",
-                  "type": "text",
-                  "description": "Required - ISO 8601"
-                },
-                {
-                  "key": "lost_location",
-                  "value": "Terminal 2, IGI Airport, New Delhi",
-                  "type": "text",
-                  "description": "Optional"
-                },
-                {
-                  "key": "image",
-                  "type": "file",
-                  "src": null,
-                  "description": "Optional - reference photo of the item"
-                }
+                { "key": "title", "value": "My Black Leather Wallet", "type": "text", "description": "Required" },
+                { "key": "description", "value": "Lost my wallet at the airport. Contains driving license, 2 credit cards, and a family photo.", "type": "text", "description": "Required" },
+                { "key": "category", "value": "wallet", "type": "text", "description": "Required - bag|phone|wallet|keys|clothing|document|electronics|jewelry|other" },
+                { "key": "color", "value": "black", "type": "text", "description": "Optional" },
+                { "key": "brand", "value": "Fossil", "type": "text", "description": "Optional" },
+                { "key": "lost_at", "value": "2026-10-03T14:00:00Z", "type": "text", "description": "Required - ISO 8601" },
+                { "key": "lost_location", "value": "Terminal 2, IGI Airport, New Delhi", "type": "text", "description": "Optional" },
+                { "key": "images", "type": "file", "src": null, "description": "Optional - reference photo(s). Use `images` key (repeat for multiple) or legacy `image` key." }
               ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/items/lost/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "items",
-                "lost",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "items", "lost", ""]
             },
-            "description": "Report a lost item. Any authenticated user. Image is optional \u2014 if provided CLIP embedding is generated. lostItemId is auto-saved.\n\nResponse 201: Full MongoDB item document."
+            "description": "Report a lost item. Any authenticated user. Image is optional — if provided, CLIP embedding is generated for AI matching. lostItemId is auto-saved.\n\nResponse 201: Full MongoDB item document."
           }
         },
         {
@@ -942,19 +620,49 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/items/lost/{{lostItemId}}/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "items",
-                "lost",
-                "{{lostItemId}}",
-                ""
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "items", "lost", "{{lostItemId}}", ""]
+            },
+            "description": "Retrieve a lost item by its MongoDB ObjectId. Owners can only see their own items; admins can view all."
+          }
+        },
+        {
+          "_postman_id": "d2e3f4a5-b6c7-8901-bcde-f12345678901",
+          "name": "Update Lost Item",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Updated Wallet Title", "type": "text", "description": "Optional" },
+                { "key": "description", "value": "Updated description.", "type": "text", "description": "Optional" },
+                { "key": "color", "value": "dark brown", "type": "text", "description": "Optional" },
+                { "key": "brand", "value": "Fossil", "type": "text", "description": "Optional" },
+                { "key": "status", "value": "found", "type": "text", "description": "Optional - searching|found|closed" },
+                { "key": "images", "type": "file", "src": null, "description": "Optional - new image(s) to replace or add. Triggers new CLIP embedding." }
               ]
             },
-            "description": "Retrieve a lost item by its MongoDB ObjectId. Owners can only see their own items."
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/items/lost/{{lostItemId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "items", "lost", "{{lostItemId}}", ""]
+            },
+            "description": "Partially update a lost item. **Owner only** (admins can update any). Writable fields: title, description, category, color, brand, lost_at, lost_location, status.\n\nValid status transitions: `searching` → `found` | `closed`.\n\nIf images are provided, CLIP embedding is re-generated.\n\nResponse 200: Updated item document."
+          }
+        },
+        {
+          "_postman_id": "e3f4a5b6-c7d8-9012-cdef-123456789012",
+          "name": "Delete Lost Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/items/lost/{{lostItemId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "items", "lost", "{{lostItemId}}", ""]
+            },
+            "description": "Permanently delete a lost item. **Owner only** (admins can delete any).\n\nResponse 204: No content."
           }
         }
       ]
@@ -971,20 +679,10 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/matching/found/{{foundItemId}}/matches/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "matching",
-                "found",
-                "{{foundItemId}}",
-                "matches",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "matching", "found", "{{foundItemId}}", "matches", ""]
             },
-            "description": "Get cached CLIP match results for a found item. Results populated asynchronously by Celery.\n\nsource: 'cache' (Redis) or 'live' (fresh Elasticsearch query)\n\nResponse 200: `{ results: [{ item_id, title, score, category }], source }`"
+            "description": "Get cached CLIP match results for a found item. Results populated asynchronously by Celery.\n\nsource: `cache` (Redis) or `live` (fresh Elasticsearch query)\n\nResponse 200: `{ results: [{ item_id, title, score, category }], source }`"
           }
         },
         {
@@ -995,18 +693,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/matching/lost/{{lostItemId}}/matches/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "matching",
-                "lost",
-                "{{lostItemId}}",
-                "matches",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "matching", "lost", "{{lostItemId}}", "matches", ""]
             },
             "description": "Get cached CLIP match results for a lost item (returns matching found items)."
           }
@@ -1020,39 +708,15 @@
             "body": {
               "mode": "formdata",
               "formdata": [
-                {
-                  "key": "image",
-                  "type": "file",
-                  "src": null,
-                  "description": "Required - photo to search with"
-                },
-                {
-                  "key": "item_type",
-                  "value": "found",
-                  "type": "text",
-                  "description": "Required - found | lost"
-                },
-                {
-                  "key": "top_k",
-                  "value": "5",
-                  "type": "text",
-                  "description": "Optional - number of results (default 5)"
-                }
+                { "key": "image", "type": "file", "src": null, "description": "Required - photo to search with" },
+                { "key": "item_type", "value": "found", "type": "text", "description": "Required - found | lost" },
+                { "key": "top_k", "value": "5", "type": "text", "description": "Optional - number of results (default 5)" }
               ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/matching/search/image/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "matching",
-                "search",
-                "image",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "matching", "search", "image", ""]
             },
             "description": "Upload a photo and find visually similar items using CLIP image embeddings. Rate limited 30/min.\n\nResponse 200: `{ results: [{ item_id, title, score, category, venue_id }], total }`"
           }
@@ -1063,34 +727,18 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/matching/search/text/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "matching",
-                "search",
-                "text",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "matching", "search", "text", ""]
             },
-            "description": "Search items by natural-language description using CLIP text embeddings. Rate limited 30/min.\n\ncategory is optional. item_type: found | lost.\n\nResponse 200: `{ results: [{ item_id, title, score, category }], total }`",
+            "description": "Search items by natural-language description using CLIP text embeddings. Rate limited 30/min.\n\n`category` is optional. `item_type`: found | lost.\n\nResponse 200: `{ results: [{ item_id, title, score, category }], total }`",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"query\": \"black leather wallet with driving license inside\",\n  \"item_type\": \"found\",\n  \"top_k\": 5,\n  \"category\": \"wallet\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           }
         }
@@ -1108,40 +756,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/claims/?ordering=-created_at",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "claims",
-                ""
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", ""],
               "query": [
-                {
-                  "key": "status",
-                  "value": "",
-                  "description": "pending|under_review|approved|pickup_scheduled|out_for_delivery|completed|cancelled",
-                  "disabled": true
-                },
-                {
-                  "key": "venue",
-                  "value": "",
-                  "description": "Filter by venue ID",
-                  "disabled": true
-                },
-                {
-                  "key": "delivery_method",
-                  "value": "",
-                  "description": "pickup|courier",
-                  "disabled": true
-                },
-                {
-                  "key": "ordering",
-                  "value": "-created_at",
-                  "description": "",
-                  "disabled": false
-                }
+                { "key": "status", "value": "", "description": "pending|under_review|approved|pickup_scheduled|out_for_delivery|completed|cancelled|rejected", "disabled": true },
+                { "key": "venue", "value": "", "description": "Filter by venue ID", "disabled": true },
+                { "key": "delivery_method", "value": "", "description": "pickup|courier", "disabled": true },
+                { "key": "ordering", "value": "-created_at", "disabled": false }
               ]
             },
             "description": "List claims scoped by role. Admin: all. Venue staff: their venue only. Owner: their own claims only."
@@ -1168,33 +789,19 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"found_item_id\": \"{{foundItemId}}\",\n  \"proof_description\": \"The wallet has my driving license with photo ID inside. There is a scratch on the bottom-right corner and a small photo of my dog. I bought it at Fossil store in Delhi in December 2023.\",\n  \"lost_item_id\": \"{{lostItemId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/claims/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "claims",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", ""]
             },
-            "description": "Submit a claim for an available found item. Owner only. Notifies venue staff via WebSocket. claimId is auto-saved.\n\nfound_item_id: 24-char MongoDB ObjectId. Item must be status=available.\nlost_item_id: optional, links your lost item report to improve matching confidence.\n\nResponse 201: Full ClaimDetail object."
+            "description": "Submit a claim for an available found item. Owner only. Notifies venue staff via WebSocket. claimId is auto-saved.\n\n`found_item_id`: 24-char MongoDB ObjectId. Item must be `status=available`.\n`lost_item_id`: optional — links your lost item report to improve matching confidence.\n\nResponse 201: Full ClaimDetail object."
           }
         },
         {
@@ -1205,18 +812,10 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/claims/{{claimId}}/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "claims",
-                "{{claimId}}",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "{{claimId}}", ""]
             },
-            "description": "Retrieve a claim with full details: status history, pickup slot, claimant info, and delivery info."
+            "description": "Retrieve a claim with full details: status history, pickup slot, claimant info, delivery info, and ID verification status."
           }
         },
         {
@@ -1225,34 +824,18 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/claims/{{claimId}}/review/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "claims",
-                "{{claimId}}",
-                "review",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "{{claimId}}", "review", ""]
             },
-            "description": "Approve a pending/under_review claim. Venue staff or admin only. Notifies claimant via WebSocket. Status -> approved.",
+            "description": "Approve a pending/under_review claim. Venue staff or admin only. Notifies claimant via WebSocket. Status → approved.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"action\": \"approve\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           }
         },
@@ -1262,34 +845,18 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/claims/{{claimId}}/review/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "claims",
-                "{{claimId}}",
-                "review",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "{{claimId}}", "review", ""]
             },
-            "description": "Reject a claim with a reason. Venue staff or admin only. rejection_reason is required. Status -> rejected.",
+            "description": "Reject a claim with a reason. Venue staff or admin only. `rejection_reason` is required. Status → rejected.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"action\": \"reject\",\n  \"rejection_reason\": \"The proof provided does not match the item description. Please provide more details.\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           }
         },
@@ -1299,34 +866,18 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/claims/{{claimId}}/delivery/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "claims",
-                "{{claimId}}",
-                "delivery",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "{{claimId}}", "delivery", ""]
             },
-            "description": "Owner selects pickup slot after approval. Claimant only. pickup_slot_id required. Status -> pickup_scheduled.\n\nUse 'List Pickup Slots' to find available slots for the venue.",
+            "description": "Owner selects pickup slot after approval. Claimant only. `pickup_slot_id` required. Status → pickup_scheduled.\n\nUse 'List Pickup Slots' to find available slots for the venue.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"delivery_method\": \"pickup\",\n  \"pickup_slot_id\": 1\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           }
         },
@@ -1336,34 +887,18 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/claims/{{claimId}}/delivery/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "claims",
-                "{{claimId}}",
-                "delivery",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "{{claimId}}", "delivery", ""]
             },
-            "description": "Owner requests courier delivery after approval. Claimant only. delivery_address required. Status -> out_for_delivery.",
+            "description": "Owner requests courier delivery after approval. Claimant only. `delivery_address` required. Status → out_for_delivery.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"delivery_method\": \"courier\",\n  \"delivery_address\": \"123 Main Street, Connaught Place, New Delhi, Delhi 110001\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           }
         },
@@ -1373,34 +908,18 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/claims/{{claimId}}/complete/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "claims",
-                "{{claimId}}",
-                "complete",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "{{claimId}}", "complete", ""]
             },
-            "description": "Mark claim as completed \u2014 item handed over or dispatched. Venue staff or admin only. delivery_tracking_id is optional. Status -> completed. Notifies claimant.",
+            "description": "Mark claim as completed — item handed over or dispatched. Venue staff or admin only. `delivery_tracking_id` is optional. Status → completed. Notifies claimant.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"delivery_tracking_id\": \"DTDC123456789IN\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             }
           }
         },
@@ -1412,19 +931,84 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/claims/{{claimId}}/cancel/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "claims",
-                "{{claimId}}",
-                "cancel",
-                ""
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "{{claimId}}", "cancel", ""]
+            },
+            "description": "Cancel a claim. Claimant only. Cannot cancel completed or already-cancelled claims. Status → cancelled."
+          }
+        },
+        {
+          "_postman_id": "f4a5b6c7-d8e9-0123-defa-234567890123",
+          "name": "Upload ID Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "id_image",
+                  "type": "file",
+                  "src": null,
+                  "description": "Required - photo of government-issued ID (passport, driving licence, etc.)"
+                }
               ]
             },
-            "description": "Cancel a claim. Claimant only. Cannot cancel completed or already-cancelled claims. Status -> cancelled."
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/claims/{{claimId}}/upload-id/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "{{claimId}}", "upload-id", ""]
+            },
+            "description": "Claimant uploads a photo of their government-issued ID for high-value item claims (phone, electronics, jewelry, wallet).\n\nResponse 200: `{ id_image_url: 'https://...' }`"
+          }
+        },
+        {
+          "_postman_id": "a5b6c7d8-e9f0-1234-efab-345678901234",
+          "name": "Verify ID",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/claims/{{claimId}}/verify-id/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "{{claimId}}", "verify-id", ""]
+            },
+            "description": "Venue staff or admin marks the claimant's uploaded ID as verified after manual review.\n\nResponse 200: `{ id_verified: true }`"
+          }
+        },
+        {
+          "_postman_id": "b6c7d8e9-f0a1-2345-fabc-456789012345",
+          "name": "List Disputes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/claims/disputes/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "disputes", ""]
+            },
+            "description": "Admin only. List found items that have 2 or more competing active claims (pending, under_review, or approved).\n\nResponse 200: `{ results: [{ found_item_id, found_item: { title, category, image_url }, claims: [...] }], count }`"
+          }
+        },
+        {
+          "_postman_id": "c7d8e9f0-a1b2-3456-abcd-567890123456",
+          "name": "Resolve Dispute",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/claims/disputes/{{foundItemId}}/resolve/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "disputes", "{{foundItemId}}", "resolve", ""]
+            },
+            "description": "Admin only. Approve one winning claim and auto-reject all other active claims for the same found item.\n\nResponse 200: `{ winner_claim_id, rejected_count }`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"winner_claim_id\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            }
           }
         },
         {
@@ -1435,32 +1019,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/claims/slots/?venue=1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "claims",
-                "slots",
-                ""
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "slots", ""],
               "query": [
-                {
-                  "key": "venue",
-                  "value": "1",
-                  "description": "",
-                  "disabled": false
-                },
-                {
-                  "key": "date",
-                  "value": "",
-                  "description": "Filter by date YYYY-MM-DD",
-                  "disabled": true
-                }
+                { "key": "venue", "value": "1", "disabled": false },
+                { "key": "date", "value": "", "description": "Filter by date YYYY-MM-DD", "disabled": true }
               ]
             },
-            "description": "List pickup slots. Non-staff only see slots with remaining capacity.\n\nResponse 200: `{ count, results: [{ id, date, start_time, end_time, slots_remaining, is_available }] }`"
+            "description": "List pickup slots. Non-staff users only see slots with remaining capacity.\n\nResponse 200: `{ count, results: [{ id, date, start_time, end_time, slots_remaining, is_available }] }`"
           }
         },
         {
@@ -1484,34 +1050,180 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"venue\": 1,\n  \"date\": \"2026-10-10\",\n  \"start_time\": \"10:00:00\",\n  \"end_time\": \"11:00:00\",\n  \"capacity\": 5\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/claims/slots/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "claims",
-                "slots",
-                ""
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "slots", ""]
+            },
+            "description": "Create a pickup slot. Venue staff or admin only. Staff don't need to specify `venue` — it defaults to their assigned venue. slotId is auto-saved.\n\nResponse 201: PickupSlot object."
+          }
+        }
+      ]
+    },
+    {
+      "_postman_id": "d8e9f0a1-b2c3-4567-bcde-678901234567",
+      "name": "Notifications",
+      "item": [
+        {
+          "_postman_id": "e9f0a1b2-c3d4-5678-cdef-789012345678",
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notifications", ""]
+            },
+            "description": "Returns the 50 most recent notifications for the current user, newest first.\n\nResponse 200: `{ results: [{ id, type, title, message, data, is_read, created_at }], unread_count }`\n\nNotification types: `match_found` | `claim_update` | `new_claim` (staff) | `system`"
+          }
+        },
+        {
+          "_postman_id": "f0a1b2c3-d4e5-6789-def0-890123456789",
+          "name": "Mark Notifications Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/notifications/mark-read/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "notifications", "mark-read", ""]
+            },
+            "description": "Mark notifications as read. Omit `ids` to mark all as read; pass a list of IDs to mark specific ones.\n\nResponse 204: No content.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [1, 2, 3]\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "_postman_id": "a1b2c3d4-e5f6-7890-ef01-901234567890",
+      "name": "Chat",
+      "item": [
+        {
+          "_postman_id": "b2c3d4e5-f6a7-8901-f012-012345678901",
+          "name": "List Chat Rooms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/rooms/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "rooms", ""]
+            },
+            "description": "List all chat rooms accessible to the current user.\n\n- Regular users: only rooms tied to their own claims.\n- Venue staff: rooms for their venue's claims.\n- Admin: all rooms.\n\nEach room includes a `found_item` snapshot fetched from MongoDB.\n\nResponse 200: `{ results: [{ id, claim_id, claim_status, claimant, venue_name, found_item, created_at }], count }`"
+          }
+        },
+        {
+          "_postman_id": "c3d4e5f6-a7b8-9012-0123-123456789012",
+          "name": "Get / Create Chat Room",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) {",
+                  "    pm.collectionVariables.set('roomId', String(json.id));",
+                  "    console.log('roomId saved:', json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/claim/{{claimId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "claim", "{{claimId}}", ""]
+            },
+            "description": "Get or auto-create the chat room for a claim. Idempotent — calling it multiple times returns the same room. roomId is auto-saved on success.\n\nAccess: claimant, venue staff of that venue, or admin.\n\nResponse 200: `{ id, claim_id, created_at, message_count }`"
+          }
+        },
+        {
+          "_postman_id": "d4e5f6a7-b8c9-0123-1234-234567890123",
+          "name": "Get Message History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/room/{{roomId}}/messages/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "room", "{{roomId}}", "messages", ""],
+              "query": [
+                { "key": "before", "value": "", "description": "Cursor: message ID for pagination (fetch messages older than this ID)", "disabled": true }
               ]
             },
-            "description": "Create a pickup slot. Venue staff or admin only. Staff don't need to specify venue \u2014 it defaults to their assigned venue. slotId is auto-saved.\n\nResponse 201: PickupSlot object."
+            "description": "Returns the 50 most recent messages in the room, oldest-first. Use `?before=<message_id>` for cursor-based pagination to load older messages.\n\nResponse 200: `{ room_id, results: [{ id, sender_id, sender_name, text, created_at }] }`"
+          }
+        },
+        {
+          "_postman_id": "e5f6a7b8-c9d0-1234-2345-345678901234",
+          "name": "Get Room Presence",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/room/{{roomId}}/presence/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "room", "{{roomId}}", "presence", ""]
+            },
+            "description": "Returns the list of user IDs currently online in the room (tracked in Redis).\n\nResponse 200: `{ room_id, online_ids: [1, 2] }`"
+          }
+        }
+      ]
+    },
+    {
+      "_postman_id": "f6a7b8c9-d0e1-2345-3456-456789012345",
+      "name": "Analytics",
+      "item": [
+        {
+          "_postman_id": "a7b8c9d0-e1f2-3456-4567-567890123456",
+          "name": "Overview Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/analytics/overview/?days=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "analytics", "overview", ""],
+              "query": [
+                { "key": "days", "value": "30", "description": "Lookback window in days (max 365, default 30)", "disabled": false }
+              ]
+            },
+            "description": "Admin only. Returns aggregate counts for the given lookback window.\n\nResponse 200:\n```json\n{\n  \"period_days\": 30,\n  \"found_items\": { \"total\", \"new\", \"archived\" },\n  \"lost_items\":  { \"total\", \"new\" },\n  \"claims\":      { \"total\", \"new\", \"pending\", \"approved\", \"rejected\", \"completed\" },\n  \"avg_resolution_hours\": 4.2,\n  \"match_rate_pct\": 68\n}\n```"
+          }
+        },
+        {
+          "_postman_id": "b8c9d0e1-f2a3-4567-5678-678901234567",
+          "name": "Daily Breakdown",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/analytics/daily/?days=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "analytics", "daily", ""],
+              "query": [
+                { "key": "days", "value": "30", "description": "Lookback window in days (max 365, default 30)", "disabled": false }
+              ]
+            },
+            "description": "Admin only. Returns per-day counts for found items, lost items, and claims — useful for time-series charts.\n\nResponse 200:\n```json\n{\n  \"period_days\": 30,\n  \"found_items_per_day\": [{ \"date\": \"2026-10-01\", \"count\": 5 }, ...],\n  \"lost_items_per_day\":  [{ \"date\": \"2026-10-01\", \"count\": 3 }, ...],\n  \"claims_per_day\":      [{ \"date\": \"2026-10-01\", \"count\": 2 }, ...]\n}\n```"
           }
         }
       ]
@@ -1528,15 +1240,10 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "health",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["health", ""]
             },
-            "description": "Lightweight health check. Returns 200 if the server is up.",
+            "description": "Lightweight health check. Returns 200 if the server is up.\n\nResponse 200: `{ status: 'ok' }`",
             "auth": {
               "type": "noauth"
             }
@@ -1550,14 +1257,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/schema/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "schema",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "schema", ""]
             },
             "description": "Download the OpenAPI 3.0 schema as JSON. DEBUG mode only.\n\nTip: In Postman click Import > Link and paste http://localhost:8000/api/schema/ to auto-import all endpoints.",
             "auth": {
@@ -1573,16 +1274,10 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/docs/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "docs",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "docs", ""]
             },
-            "description": "Interactive Swagger UI. DEBUG mode only. Open this URL in a browser \u2014 it does not return JSON.",
+            "description": "Interactive Swagger UI. DEBUG mode only. Open this URL in a browser — it does not return JSON.",
             "auth": {
               "type": "noauth"
             }
@@ -1596,22 +1291,30 @@
       "item": [
         {
           "_postman_id": "c4418d2b-edbf-49d8-a65a-f68ccf92751c",
-          "name": "WebSocket Notifications",
+          "name": "WebSocket — Notifications",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/ws/notifications/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "ws",
-                "notifications",
-                ""
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["ws", "notifications", ""]
             },
-            "description": "NOT an HTTP endpoint \u2014 use a WebSocket client.\n\nConnection URL: ws://localhost:8000/ws/notifications/?token={{accessToken}}\n\nEvents received:\n- Match found:     { type: 'match', item_id, item_type, match_count }\n- Claim updated:   { type: 'claim_status', claim_id, status }\n- New claim (staff): { type: 'new_claim', claim_id, venue_id }\n\nClose code 4001 = invalid token (no auto-reconnect)."
+            "description": "NOT an HTTP endpoint — use a WebSocket client.\n\nConnection URL:\n  ws://localhost:8000/ws/notifications/?token={{accessToken}}\n\nEvents received:\n  Match found:       { type: 'match',        item_id, item_type, match_count }\n  Claim updated:     { type: 'claim_status', claim_id, status }\n  New claim (staff): { type: 'new_claim',    claim_id, venue_id }\n\nClose code 4001 = invalid token (no auto-reconnect)."
+          }
+        },
+        {
+          "_postman_id": "c9d0e1f2-a3b4-5678-6789-789012345678",
+          "name": "WebSocket — Chat Room",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ws/chat/{{roomId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["ws", "chat", "{{roomId}}", ""]
+            },
+            "description": "NOT an HTTP endpoint — use a WebSocket client.\n\nConnection URL:\n  ws://localhost:8000/ws/chat/{{roomId}}/?token={{accessToken}}\n\nGet roomId first via 'Get / Create Chat Room'.\n\nSend message:\n  { \"type\": \"chat_message\", \"text\": \"Hello!\" }\n\nEvents received:\n  New message: { type: 'chat_message', room_id, claim_id, sender_id, sender_name, text, created_at }\n  Presence:    { type: 'presence', user_id, online }\n\nClose code 4001 = invalid token (no auto-reconnect)."
           }
         }
       ]
